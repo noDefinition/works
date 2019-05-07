@@ -1,19 +1,6 @@
 from .n1 import *
 
 
-# def get_norm_of_variables(order, variables):
-#     assert len(variables) > 0
-#     norm = list()
-#     for v in variables:
-#         if isinstance(v, (Denses, Dense)):
-#             norm.append(v.get_norm(order))
-#         elif isinstance(v, (tf.Variable,)):
-#             norm.append(tf.norm(v, ord=order))
-#         else:
-#             raise TypeError('type {} of v {} invalid'.format(type(v), v))
-#     return sum(norm)
-
-
 # noinspection PyAttributeOutsideInit,PyPep8Naming
 class N5(N1):
     """ 对抗噪声（聚类/单词embedding加噪声参数）"""
@@ -21,8 +8,8 @@ class N5(N1):
 
     def __init__(self, args: dict):
         super(N5, self).__init__(args)
-        self.eps = args[eps_]
-        self.worc = args[worc_]
+        self.worc = args[C.worc_]
+        self.eps = args[C.eps_]
 
     def define_cluster_embed(self, init):
         super(N5, self).define_cluster_embed(init)

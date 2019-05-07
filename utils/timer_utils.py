@@ -4,7 +4,7 @@ default_name = 'main'
 check_points = dict()
 
 
-def time_format(secs):
+def time_show(secs):
     if secs <= 60:
         return '{:.1f} s'.format(secs)
     elif secs <= 3600:
@@ -39,8 +39,17 @@ def stat_time_elapse(func):
         delta = time.time() - t0
         print('{} time elapse: {:.2f}'.format(func.__name__, delta))
         return res
-    
+
     return f
+
+
+def timestamp_of_created_at(created_at):
+    import pytz
+    from datetime import datetime
+    # t = datetime.strptime('Thu Apr 23 13:38:19 +0000 2009', '%a %b %d %H:%M:%S +0000 %Y')
+    t = datetime.strptime(created_at, '%a %b %d %H:%M:%S +0000 %Y')
+    t = t.replace(tzinfo=pytz.UTC)
+    return datetime.timestamp(t)
 
 
 class Timer:
@@ -48,11 +57,11 @@ class Timer:
         self.init_t = time.time()
         self.step = 0
         self.total = total
-    
+
     def progress(self, can_print):
         cur_t = time.time()
         self.step += 1
         if self.step > 0 and can_print:
-            sum_t = time_format(cur_t - self.init_t)
-            more_t = time_format((cur_t - self.init_t) * (self.total / self.step - 1))
+            sum_t = time_show(cur_t - self.init_t)
+            more_t = time_show((cur_t - self.init_t) * (self.total / self.step - 1))
             print('{}/{}, sum {}, remain {}'.format(self.step, self.total, sum_t, more_t))

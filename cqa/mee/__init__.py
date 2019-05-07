@@ -1,12 +1,20 @@
-from utils.tune.arg_keys import *
+from utils.tune.arg_keys import X
 
-winit_ = 'wit'
-wtrn_ = 'wtn'
-tmd_ = 'tmd'
 
-otp_ = 'otp'
-ptp_ = 'ptp'
-mtp_ = 'mtp'
-atp_ = 'atp'
+class K(X):
+    winit = 'wit'
+    wtrn = 'wtn'
+    tmd = 'tmd'
 
-aqm_ = 'aqm'
+    otp = 'otp'
+    ptp = 'ptp'
+
+    temp = 'temp'
+    woru = 'woru'
+    eps = 'eps'
+    atp = 'atp'
+    mtp = 'mtp'
+
+    mix = 'mix'
+    dpt = 'dpt'
+    act = 'act'

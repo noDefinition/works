@@ -1,10 +1,10 @@
 import numpy as np
 import tensorflow as tf
 
-# import tensorflow.summary as su
-
+i16 = tf.int16
 i32 = tf.int32
 i64 = tf.int64
+f16 = tf.float16
 f32 = tf.float32
 f64 = tf.float64
 
@@ -14,11 +14,9 @@ sigmoid = tf.nn.sigmoid
 softmax = tf.nn.softmax
 
 
+# import tensorflow.summary as su
 # histogram = su.histogram
 # scalar = su.scalar
-
-
-# tf.keras.layers.Dense()
 
 
 def normal(shape, scale, loc=0):

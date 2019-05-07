@@ -289,21 +289,12 @@ class BasicPair:
         with tf.variable_scope('TopLayer'):
             for i, n in enumerate(self.args.fc):
                 # o = tf.layers.batch_normalization(o)
-                o = tf.layers.dense(
-                    o,
-                    n,
-                    activation=tf.nn.relu,
-                    name='dense_{}'.format(i),
-                )
+                o = tf.layers.dense(o, n, activation=tf.nn.relu, name='dense_{}'.format(i), )
                 if 0 < self.args.dp < 1:
                     o = tf.layers.dropout(o, rate=self.args.dp)
             # o = tf.layers.batch_normalization(o)
-            o = tf.layers.dense(
-                o,
-                1,
-                # use_bias = False,
-                name='dense_{}'.format(len(self.args.fc)),
-            )
+            o = tf.layers.dense(o, 1, name='dense_{}'.format(len(self.args.fc)), )
+            # use_bias = False,
             o = tf.reshape(o, (-1,))
         return o
 

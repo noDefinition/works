@@ -4,32 +4,6 @@ from . import BasicPair
 from . import a_maxlen, q_maxlen
 
 
-class AAAI17(BasicPair):
-    tc = dict(BasicPair.tc)
-    tc['init_word'] = ['random']
-    tc['train_word'] = ['train']
-
-    def get_question_rep(self, q):
-        return self.text_embs(q)
-
-    def rep(self, ans, user):
-        q, q_mask = self.question_rep
-        # q = self.lstm(q)
-        q = self.mask_mean(q, q_mask)
-        ans, a_mask = self.text_embs(ans)  # (bs, al, k)
-        # ans = self.lstm(ans)
-        ans = self.mask_mean(ans, a_mask)
-        user = self.user_emb(user)
-        qw = tf.get_variable(
-            name='qw',
-            shape=(self.args.dim_k, self.args.dim_k),
-        )
-        q = tf.matmul(q, qw)
-        qa = self.dot(q, ans)
-        qu = self.dot(q, user)
-        return qa * qu
-
-
 class AAAI15(BasicPair):
     tc = dict(BasicPair.tc)
 
@@ -57,6 +31,29 @@ class AAAI15(BasicPair):
         return o
 
 
+class AAAI17(BasicPair):
+    tc = dict(BasicPair.tc)
+    tc['init_word'] = ['random']
+    tc['train_word'] = ['train']
+
+    def get_question_rep(self, q):
+        return self.text_embs(q)
+
+    def rep(self, ans, user):
+        q, q_mask = self.question_rep
+        # q = self.lstm(q)
+        q = self.mask_mean(q, q_mask)
+        ans, a_mask = self.text_embs(ans)  # (bs, al, k)
+        # ans = self.lstm(ans)
+        ans = self.mask_mean(ans, a_mask)
+        user = self.user_emb(user)
+        qw = tf.get_variable(name='qw', shape=(self.args.dim_k, self.args.dim_k))
+        q = tf.matmul(q, qw)
+        qa = self.dot(q, ans)
+        qu = self.dot(q, user)
+        return qa * qu
+
+
 class IJCAI15(BasicPair):
     tc = dict(BasicPair.tc)
 
@@ -74,19 +71,11 @@ class IJCAI15(BasicPair):
         # print(t, maxlen); input()
         with tf.variable_scope('CNN_tk'):
             ns = 4
-            t = tf.layers.conv1d(
-                t,
-                filters=10,
-                kernel_size=3,
-                kernel_initializer=self.get_initializer(),
-            )
+            t = tf.layers.conv1d(t, filters=10, kernel_size=3,
+                                 kernel_initializer=self.get_initializer(), )
             t = self.top_k(t, ns + (maxlen - ns) // 2)
-            t = tf.layers.conv1d(
-                t,
-                filters=5,
-                kernel_size=3,
-                kernel_initializer=self.get_initializer(),
-            )
+            t = tf.layers.conv1d(t, filters=5, kernel_size=3,
+                                 kernel_initializer=self.get_initializer(), )
             t = self.top_k(t, ns)
             o = tf.layers.flatten(t)
         return o
@@ -121,11 +110,3 @@ class IJCAI15(BasicPair):
             o = qma + qav + b
             o = tf.nn.relu(o)
             return o
-
-
-def main():
-    print('hello world, Baselines.py')
-
-
-if __name__ == '__main__':
-    main()

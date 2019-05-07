@@ -1,26 +1,7 @@
 import numpy as np
-
 from utils import au, iu, tmu
 
 RVS = R, V, S = 'train', 'valid', 'test'
-
-
-def init_user_vec(uint_wids, word_vec, uint_max=300000):
-    w_num, w_dim = word_vec.shape
-    print('w_dim', w_dim)
-    u_vecs = np.zeros(shape=(uint_max, w_dim), dtype=np.float32)
-    u_cnts = np.zeros(shape=uint_max, dtype=np.float32)
-    for uint, wids in uint_wids:
-        u_vecs[uint] += np.mean([word_vec[wid - 1] for wid in wids if wid > 0], axis=0)
-        u_cnts[uint] += 1
-    for uint in range(uint_max):
-        if u_cnts[uint] == 0:
-            u_vecs = u_vecs[:uint]
-            u_cnts = u_cnts[:uint]
-            print(uint, 'max uid ')
-            break
-    user_vec = u_vecs / np.reshape(u_cnts, [-1, 1])
-    return user_vec
 
 
 def partition_qids(aid2qu_file, seed, pidx):
@@ -105,9 +86,8 @@ def partition_qids(aid2qu_file, seed, pidx):
             return rvs2qid
 
 
-# noinspection PyAttributeOutsideInit
 class _Data:
-    name = None
+    len_q = len_a = name = None
 
     def __init__(self):
         f = self.fill
@@ -115,81 +95,113 @@ class _Data:
         self.word_vec_file = f('word_vec_64d.pkl')
         self.qid2qauv_file = f('cdong', 'qid2qauv_dict.pkl')
         self.rvs2qids_file = f('cdong', 'rvs2qids_dict.pkl')
-        self.simple_qid2qauv_file = f('simple', 'qid2qauv_dict.pkl')
-        self.simple_rvs2qids_file = f('simple', 'rvs2qids_dict.pkl')
-        self.need_transfer = [self.word_vec_file, self.user_vec_file,
-                              self.qid2qauv_file, self.rvs2qids_file,
-                              self.simple_qid2qauv_file, self.simple_rvs2qids_file]
+        # self.simple_qid2qauv_file = f('simple', 'qid2qauv_dict.pkl')
+        # self.simple_rvs2qids_file = f('simple', 'rvs2qids_dict.pkl')
+        self.need_transfer = [
+            self.user_vec_file, self.word_vec_file, self.qid2qauv_file, self.rvs2qids_file,
+            # self.simple_qid2qauv_file, self.simple_rvs2qids_file
+        ]
+        self.qid2qauv = self.rvs2qids = self.user_vec = self.word_vec = None
+        self.aid2votes = self.aid2pf16 = self.user_vec_bert = self.qid2auv_bert = None
 
     def fill(self, *names):
         cdong_home = '/home/cdong/works/cqa/data/{}'.format(self.name)
         return iu.join(cdong_home, *names)
 
-    @tmu.stat_time_elapse
-    def init_save_rvs2qids_qid2qauv(self):
-        rvs2qids = partition_qids(self.aid2qu_file, 42987, 0)
-        self.load_wwang_parts()
+    # @tmu.stat_time_elapse
+    # def init_save_rvs2qids_qid2qauv(self):
+    #     rvs2qids = partition_qids(self.aid2qu_file, 42987, 0)
+    #     self.load_wwang_parts()
+    #
+    #     uid_sort = sorted(set(uid for aid, (qid, uid) in self.aid2qu.items()))
+    #     uid2uint = dict((uid, uint) for uint, uid in enumerate(uid_sort))
+    #
+    #     # user vec init by averaging
+    #     _, w_dim = self.word_vec.shape
+    #     uint2v_sum = np.zeros(shape=(len(uid2uint), w_dim), dtype=np.float32)
+    #     uint2count = np.zeros(shape=(len(uid2uint), 1), dtype=np.float32)
+    #     for aid, (qid, uid) in self.aid2qu.items():
+    #         uint = uid2uint[uid]
+    #         w_vecs = [self.word_vec[wid - 1] for wid in self.aid2wids[aid] if wid > 0]
+    #         uint2v_sum[uint] += np.mean(w_vecs, axis=0)
+    #         uint2count[uint][0] += 1
+    #     uint2vec = uint2v_sum / uint2count
+    #
+    #     qid2auvs = {}
+    #     for aid, (qid, uid) in self.aid2qu.items():
+    #         qid2auvs.setdefault(qid, list()).append((aid, uid, self.aid2vote[aid]))
+    #     qid2qauv = {}
+    #     for idx, (qid, auvs) in enumerate(qid2auvs.items()):
+    #         auvs = sorted(auvs, key=lambda x: x[-1], reverse=True)
+    #         aids, uids, votes = au.transpose(auvs)
+    #         qwid = self.qid2wids[qid]
+    #         awids = [self.aid2wids[aid] for aid in aids]
+    #         uints = [uid2uint[uid] for uid in uids]
+    #         qid2qauv[qid] = (qwid, awids, uints, votes)
+    #         if idx < 10:
+    #             print(auvs)
+    #             print()
+    #             print(aids)
+    #             print(qwid)
+    #             print(qid2qauv[qid][1])
+    #             print(qid2qauv[qid][2])
+    #             print('-------------------------------')
+    #
+    #     iu.dump_pickle(self.user_vec_file, uint2vec)
+    #     iu.dump_pickle(self.uid2uint_file, uid2uint)
+    #     iu.dump_pickle(self.rvs2qids_file, rvs2qids)
+    #     iu.dump_pickle(self.qid2qauv_file, qid2qauv)
 
-        uid_sort = sorted(set(uid for aid, (qid, uid) in self.aid2qu.items()))
-        uid2uint = dict((uid, uint) for uint, uid in enumerate(uid_sort))
-
-        # user vec init by averaging
-        _, w_dim = self.word_vec.shape
-        uint2v_sum = np.zeros(shape=(len(uid2uint), w_dim), dtype=np.float32)
-        uint2count = np.zeros(shape=(len(uid2uint), 1), dtype=np.float32)
-        for aid, (qid, uid) in self.aid2qu.items():
-            uint = uid2uint[uid]
-            w_vecs = [self.word_vec[wid - 1] for wid in self.aid2wids[aid] if wid > 0]
-            uint2v_sum[uint] += np.mean(w_vecs, axis=0)
-            uint2count[uint][0] += 1
-        uint2vec = uint2v_sum / uint2count
-
-        qid2auvs = {}
-        for aid, (qid, uid) in self.aid2qu.items():
-            qid2auvs.setdefault(qid, list()).append((aid, uid, self.aid2vote[aid]))
-        qid2qauv = {}
-        for idx, (qid, auvs) in enumerate(qid2auvs.items()):
-            auvs = sorted(auvs, key=lambda x: x[-1], reverse=True)
-            aids, uids, votes = au.transpose(auvs)
-            qwid = self.qid2wids[qid]
-            awids = [self.aid2wids[aid] for aid in aids]
-            uints = [uid2uint[uid] for uid in uids]
-            qid2qauv[qid] = (qwid, awids, uints, votes)
-            if idx < 10:
-                print(auvs)
-                print()
-                print(aids)
-                print(qwid)
-                print(qid2qauv[qid][1])
-                print(qid2qauv[qid][2])
-                print('-------------------------------')
-
-        iu.dump_pickle(self.user_vec_file, uint2vec)
-        iu.dump_pickle(self.uid2uint_file, uid2uint)
-        iu.dump_pickle(self.rvs2qids_file, rvs2qids)
-        iu.dump_pickle(self.qid2qauv_file, qid2qauv)
-
-    @tmu.stat_time_elapse
-    def init_save_rvs2qids_qid2qauv_simple(self):
-        tmu.check_time('load')
-        print(self.qid2qauv_file)
-        self.rvs2qids = iu.load_pickle(self.rvs2qids_file)
-        self.qid2qauv = iu.load_pickle(self.qid2qauv_file)
-        tmu.check_time('load')
-        rvs2lim = {R: 1000, V: 100, S: 100}
-        rvs2qids_simple = {x: np.random.choice(qids, rvs2lim[x], replace=False)
-                           for x, qids in self.rvs2qids.items()}
-        chosen_qids = set(au.merge(rvs2qids_simple.values()))
-        print('chosen qid num', len(chosen_qids), len(au.merge(rvs2qids_simple.values())))
-        qid2qauv_simple = dict((qid, self.qid2qauv[qid]) for qid in chosen_qids)
-        iu.dump_pickle(self.simple_rvs2qids_file, rvs2qids_simple)
-        iu.dump_pickle(self.simple_qid2qauv_file, qid2qauv_simple)
+    # @tmu.stat_time_elapse
+    # def init_save_rvs2qids_qid2qauv_simple(self):
+    #     tmu.check_time('load')
+    #     print(self.qid2qauv_file)
+    #     self.rvs2qids = iu.load_pickle(self.rvs2qids_file)
+    #     self.qid2qauv = iu.load_pickle(self.qid2qauv_file)
+    #     tmu.check_time('load')
+    #     rvs2lim = {R: 1000, V: 100, S: 100}
+    #     rvs2qids_simple = {x: np.random.choice(qids, rvs2lim[x], replace=False)
+    #                        for x, qids in self.rvs2qids.items()}
+    #     chosen_qids = set(au.merge(rvs2qids_simple.values()))
+    #     print('chosen qid num', len(chosen_qids), len(au.merge(rvs2qids_simple.values())))
+    #     qid2qauv_simple = {qid: self.qid2qauv[qid] for qid in chosen_qids}
+    #     iu.dump_pickle(self.simple_rvs2qids_file, rvs2qids_simple)
+    #     iu.dump_pickle(self.simple_qid2qauv_file, qid2qauv_simple)
 
     def load_word_vec(self):
         self.word_vec = iu.load_pickle(self.word_vec_file)
 
     def load_user_vec(self):
         self.user_vec = iu.load_pickle(self.user_vec_file)
+
+    """ bert """
+
+    def load_user_vec_bert(self):
+        file = self.fill('bert', 'user_vec_bert.pkl')
+        self.user_vec_bert = iu.load_pickle(file)
+
+    @tmu.stat_time_elapse
+    def get_qid2auv_bert(self):
+        qau_list = iu.load_pickle(self.fill('_mid', 'qau_list.pkl'))
+        uid2uint = iu.load_pickle(self.fill('_mid', 'uid2uint_dict.pkl'))
+        aid2pf16 = iu.load_pickle(self.fill('bert', 'aid2pf16.pkl'))
+        aid2vote = iu.load_pickle(self.fill('aid2vote_dict.pkl'))
+        print(len(qau_list), len(uid2uint), len(aid2pf16), len(aid2vote))
+        self.qid2auv_bert = dict()
+        for qid, aid, uid in qau_list:
+            if qid not in self.qid2auv_bert:
+                self.qid2auv_bert[qid] = [], [], []
+            al, ul, vl = self.qid2auv_bert[qid]
+            al.append(aid2pf16[aid])
+            ul.append(uid2uint[uid])
+            vl.append(aid2vote[aid])
+
+    def load_bert_full(self):
+        self.load_user_vec_bert()
+        self.get_qid2auv_bert()
+        self.rvs2qids = iu.load_pickle(self.rvs2qids_file)
+
+    """ normal """
 
     @tmu.stat_time_elapse
     def load_cdong_full(self):
@@ -198,18 +210,62 @@ class _Data:
         self.rvs2qids = iu.load_pickle(self.rvs2qids_file)
         self.qid2qauv = iu.load_pickle(self.qid2qauv_file)
 
-    @tmu.stat_time_elapse
-    def load_cdong_simple(self):
-        self.load_word_vec()
-        self.load_user_vec()
-        self.rvs2qids = iu.load_pickle(self.simple_rvs2qids_file)
-        self.qid2qauv = iu.load_pickle(self.simple_qid2qauv_file)
+    # @tmu.stat_time_elapse
+    # def load_cdong_simple(self):
+    #     self.load_word_vec()
+    #     self.load_user_vec()
+    #     self.rvs2qids = iu.load_pickle(self.simple_rvs2qids_file)
+    #     self.qid2qauv = iu.load_pickle(self.simple_qid2qauv_file)
+
+    def rvs_size(self):
+        return [len(self.rvs2qids[x]) for x in RVS]
+
+    def load(self, is_full_data):
+        self.load_cdong_full() if bool(is_full_data) else self.load_cdong_simple()
+        print('word_vec.shape:{},  user_vec.shape:{}'.format(
+            self.word_vec.shape, self.user_vec.shape),
+            '| r:{}, v:{}, s:{}'.format(*self.rvs_size()))
+        for qid, (ql, al, ul, vl) in self.qid2qauv.items():
+            v = ql[:self.len_q]
+            if len(v) < self.len_q:
+                ql = v + [0] * (self.len_q - len(v))
+            self.qid2qauv[qid] = (ql, al, ul, vl)
+
+    def get_train_qids(self):
+        return self.rvs2qids[R]
+
+    def get_valid_qids(self):
+        return self.rvs2qids[V]
+
+    def get_test_qids(self):
+        return self.rvs2qids[S]
+
+    def get_auv_bert(self, qid):
+        return self.qid2auv_bert[qid]
+
+    def gen(self, rvs, source: dict, shuffle: bool):
+        qids = self.rvs2qids[rvs]
+        if shuffle:
+            qids = au.shuffle(qids)
+        for qid in qids:
+            yield source[qid]
+
+    def gen_train(self, shuffle=True):
+        return self.gen(R, self.qid2qauv, shuffle=shuffle)
+
+    def gen_valid(self):
+        return self.gen(V, self.qid2qauv, shuffle=False)
+
+    def gen_test(self):
+        return self.gen(S, self.qid2qauv, shuffle=False)
 
 
 class DataSo(_Data):
-    # ques: 139128, answ: 884261, user: unknown
+    # ques: 139128, answ: 884261, user: 40213
     # word: 52457(w/o padding)
     name = 'so'
+    len_q = 20
+    len_a = 200
 
     def __init__(self):
         super(DataSo, self).__init__()
@@ -219,6 +275,7 @@ class DataSo(_Data):
         self.qid2wids_file = f('qid2wids_dict.pkl')
         self.aid2vote_file = f('aid2vote_dict.pkl')
         self.uid2uint_file = f('uid2uint_dict.pkl')
+        self.qid2wids = self.aid2wids = self.aid2vote = self.aid2qu = None
 
     @tmu.stat_time_elapse
     def load_wwang_parts(self):
@@ -244,76 +301,18 @@ class DataZh(_Data):
     # ques: 52555, answ: 2671359, user: 168088
     # word: 65895
     name = 'zh'
-
-    def __init__(self):
-        super(DataZh, self).__init__()
-        # f = self.fill
-
-
-class Sampler:
-    def __init__(self, d_cls):
-        if d_cls in name2d_class:
-            d_cls = name2d_class[d_cls]
-        print('data:', d_cls.name)
-        assert issubclass(d_cls, _Data)
-        self.d_obj = d_cls()
-
-    def rvs_size(self):
-        return list(len(self.d_obj.rvs2qids[x]) for x in RVS)
-
-    def load(self, is_full_data):
-        self.d_obj.load_cdong_full() if bool(is_full_data) else self.d_obj.load_cdong_simple()
-        o = self.d_obj
-        self.qid2qauv = self.d_obj.qid2qauv
-        self.rvs2qids = self.d_obj.rvs2qids
-        print(
-            'word_vec.shape:{},  user_vec.shape:{}'.format(o.word_vec.shape, o.user_vec.shape),
-            '| r {}, v {}, s {}'.format(*self.rvs_size()),
-            # '| total q:{}, total a:{}'.format(
-            #     len(o.qid2qauv), sum(len(as_) for qs_, as_, us_, vs_ in o.qid2qauv.values()))
-        )
-
-    def gen(self, rvs):
-        qids = self.rvs2qids[rvs]
-        return (self.qid2qauv[qid] for qid in qids), len(qids)
-
-    def get_train(self):
-        return self.gen(R)
-
-    def get_valid(self):
-        return self.gen(V)
-
-    def get_test(self):
-        return self.gen(S)
-
-    def a0u0a1u1(self, batch_size: int, multiply: int):
-        from utils.array_utils import split_slices
-        def random_index_pairs(max_len):
-            num_pairs = max_len * multiply
-            pairs = np.random.choice(np.arange(0, max_len), size=(num_pairs * 2, 2))
-            return list(set((max(a, b), min(a, b)) for a, b in pairs if a != b))[:num_pairs]
-
-        for qs_, as_, us_, vs_ in self.gen(R):
-            assert len(as_) == len(us_) == len(vs_)
-            idx_pairs = random_index_pairs(len(as_))
-            for pairs_slice in split_slices(idx_pairs, batch_size):
-                a0, u0, a1, u1 = [list() for _ in range(4)]
-                for i0, i1 in pairs_slice:
-                    a0.append(as_[i0])
-                    u0.append(us_[i0])
-                    a1.append(as_[i1])
-                    u1.append(us_[i1])
-                yield a0, u0, a1, u1
+    len_q = 40
+    len_a = 200
 
 
 class_list = [DataSo, DataZh]
 name_list = [_c.name for _c in class_list]
-object_list = [_c() for _c in class_list]
 name2d_class = dict(zip(name_list, class_list))
 
 if __name__ == '__main__':
-    # _d = DataSo()
-    _d = DataZh()
-    # _d.init_save_rvs2qids_qid2qauv()
-    _d.init_save_rvs2qids_qid2qauv_simple()
-    # _d.load_cdong_full()
+    from utils.node_utils import Nodes
+    from clu.data.remote_transfer import transfer_files, OUT
+
+    dict().copy()
+    files = DataSo().need_transfer + DataZh().need_transfer
+    transfer_files(files, files, OUT, Nodes.alias_gpu)

@@ -1,5 +1,5 @@
 from clu.data.datasets import Sampler
-from clu.me import *
+from clu.me import C
 from clu.me.gen1 import *
 from utils.deep.layers import get_session, tf, np
 from utils import au, iu, lu
@@ -8,33 +8,33 @@ from utils import au, iu, lu
 class Runner:
     def __init__(self, args: dict):
         self.args = args
-        self.gid = args[gid_]
-        self.gpu_id = args[gi_]
-        self.gpu_frac = args[gp_]
-        self.epoch_num = args[ep_]
-        self.batch_size = args[bs_]
-        self.neg_size = args[ns_]
-        self.data_name = args[dn_]
-        self.model_name = args[vs_]
+        self.gid = args[C.gid]
+        self.gpu_id = args[C.gi]
+        self.gpu_frac = args[C.gp]
+        self.epoch_num = args[C.ep]
+        self.batch_size = args[C.bs]
+        self.neg_size = args[C.ns_]
+        self.data_name = args[C.dn]
+        self.model_name = args[C.vs]
 
-        self.w_init = args[wini_]
-        self.c_init = args[cini_]
-        self.scale = args[sc_]
-        self.c_num = args[cn_]
+        self.w_init = args[C.wini_]
+        self.c_init = args[C.cini_]
+        self.scale = args[C.sc]
+        self.c_num = args[C.cn_]
 
-        self.log_path = args[lg_]
+        self.log_path = args[C.lg]
         entries = [(k, v) for k, v in args.items() if v is not None]
-        log_name = au.entries2name(entries, exclude={gi_, gp_, lg_}, postfix='.txt')
+        log_name = au.entries2name(entries, exclude={C.gi, C.gp, C.lg}, postfix='.txt')
         self.log_file = iu.join(self.log_path, log_name)
         self.logger = lu.get_logger(self.log_file)
 
         # self.is_record = Nodes.is_1702()
         self.is_record = False
         if self.is_record:
-            self.store_path = iu.join(self.log_path, 'gid={}'.format(self.gid))
-            self.hyper_file = iu.join(self.store_path, 'hyper')
-            self.param_file = iu.join(self.store_path, 'model.ckpt')
-            iu.mkdir(self.store_path)
+            self.writer_path = iu.join(self.log_path, 'gid={}'.format(self.gid))
+            self.param_file = iu.join(self.writer_path, 'model.ckpt')
+            self.hyper_file = iu.join(self.writer_path, 'hyper')
+            iu.mkdir(self.writer_path)
             iu.dump_json(self.hyper_file, args)
 
         self.history = list()
@@ -58,7 +58,7 @@ class Runner:
             writer.add_summary(sess.run(score_merge, feed_dict=p2v), len(self.history))
 
         import tensorflow.summary as su
-        writer = su.FileWriter(self.store_path, sess.graph)
+        writer = su.FileWriter(self.writer_path, sess.graph)
         model_merge = su.merge_all()
         s2p = {t: tf.placeholder(dtype=tf.float32) for t in au.eval_scores}
         score_merge = su.merge([su.scalar(s, p, family='eval') for s, p in s2p.items()])
@@ -79,7 +79,7 @@ class Runner:
         #     w_embed = np.random.normal(0., self.scale, size=w_embed.shape)
         #     c_embed = np.random.normal(0., self.scale, size=c_embed.shape)
         model = self.get_model_class()(self.args)
-        model.build(w_embed, c_embed)
+        model.build_model(w_embed, c_embed)
         sess = get_session(self.gpu_id, self.gpu_frac, allow_growth=True, run_init=True)
         model.set_session(sess)
         # summary_details, summary_scores = self.get_writer(sess)
@@ -126,6 +126,6 @@ class Runner:
 
 
 if __name__ == '__main__':
-    from me.grid import get_args
+    from clu.me.grid import get_args
 
     Runner(get_args()).run()

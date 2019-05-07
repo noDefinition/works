@@ -4,11 +4,12 @@ import pickle
 import re
 import shutil
 from pathlib import Path
+from importlib import reload
 
-dump = json.dump
-load = json.load
 dumps = json.dumps
 loads = json.loads
+dumpp = pickle.dumps
+loadp = pickle.loads
 
 
 def load_json(file):
@@ -52,16 +53,13 @@ def dump_pickle(file, obj, parents=True):
 def get_cwd(): return os.getcwd()
 
 
-def get_name(path): return Path(path).name
-
-
 def rename(path, target): Path(path).rename(target)
 
 
-def base_name(abs_path): return os.path.basename(abs_path)
-
-
 def parent_name(path): return os.path.dirname(path)
+
+
+def get_name(path): return Path(path).name
 
 
 def is_dir(path): return os.path.isdir(path)
@@ -80,6 +78,10 @@ def rmtree(path):
     if os.path.exists(path):
         print('remove path {}'.format(path))
         shutil.rmtree(path)
+
+
+def move(src, dst):
+    shutil.move(src, dst)
 
 
 def concat_files(input_files, output_file):

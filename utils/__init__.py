@@ -1,6 +1,6 @@
 import utils.array_utils as au
-import utils.io_utils as iu
 import utils.doc_utils as du
+import utils.io_utils as iu
 import utils.logger_utils as lu
 import utils.multiprocess_utils as mu
 import utils.pattern_utils as pu

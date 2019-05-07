@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from subprocess import DEVNULL as V, Popen
 
 from utils import au, iu, tmu
-from utils.tune.arg_keys import *
+from utils.tune.arg_keys import X
 
 
 class LY:
@@ -53,14 +53,11 @@ def auto_gpu(func, args_list, device2max, callback=None):
                 return d
         raise ValueError('no device can be allocated')
 
-    def _f(f, a, q):
-        q.put(f(*a))
-
     def allocate_run(a):
         d = allocate_device()
         a = [d] + list(a)
         q = mp.Queue()
-        p = mp.Process(target=_f, args=(func, a, q), daemon=True)
+        p = mp.Process(target=_sub, args=(func, a, q), daemon=True)
         p.start()
         pool.append((d, p, q))
 
@@ -82,13 +79,17 @@ def auto_gpu(func, args_list, device2max, callback=None):
     pbar.close()
 
 
+def _sub(f, a, q):
+    q.put(f(*a))
+
+
 def run_on_gpu(device_id, od, device2max, max2frac, cmd_pre):
-    od.update({gi_: device_id, gp_: max2frac[device2max[device_id]]})
+    od.update({X.gi: device_id, X.gp: max2frac[device2max[device_id]]})
     entries = [(k if k.startswith('-') else '-' + k, v) for k, v in od.items()]
     command = cmd_pre + au.entries2name(entries, inter=' ', inner=' ')
     v = None if (sum(device2max.values()) == 1) else V
     Popen(command, cwd='./', shell=True, stdin=v, stdout=v, stderr=None).communicate()
-    return device_id, od[gid_]
+    return device_id, od[X.gid]
 
 
 def run_on_end(args):
@@ -121,8 +122,8 @@ def get_log_path(str_list, make_new: bool):
 
 def update_od_list(od_list, log_path, shuffle):
     for i, od in enumerate(od_list):
-        od[gid_] = i
-        od[lg_] = log_path
+        od[X.gid] = i
+        od[X.lg] = log_path
     if shuffle:
         od_list = au.shuffle(od_list)
     for i, od in enumerate(od_list):
@@ -131,27 +132,24 @@ def update_od_list(od_list, log_path, shuffle):
 
 
 def get_common_parser() -> ArgumentParser:
-    parser = get_augmented_parser()
-    _ = parser.add_argument
-    _(gid_, type=int, help='global id', required=True)
-    _(lid_, type=int, default=0, help='local id')
-    _(gi_, type=int, help='gpu id number')
-    _(gp_, type=float, help='gpu fraction')
-
-    _(lg_, type=str, help='logging path')
-    _(dn_, type=str, help='data name')
-    _(vs_, type=str, help='model version')
-    _(ep_, type=int, help='epoch num', required=True)
-    return parser
-
-
-def get_augmented_parser() -> ArgumentParser:
     def _(name, **kwargs):
         prev('-' + name, **kwargs)
 
     parser = ArgumentParser()
     prev = parser.add_argument
     parser.add_argument = _
+    # return parser
+    # parser = get_augmented_parser()
+    # _ = parser.add_argument
+    _(X.gid, type=int, help='global id', required=True)
+    _(X.lid, type=int, help='local id')
+    _(X.gi, type=int, help='gpu id number')
+    _(X.gp, type=float, help='gpu fraction')
+
+    _(X.lg, type=str, help='logging path')
+    _(X.dn, type=str, help='data name')
+    _(X.vs, type=str, help='model version')
+    _(X.ep, type=int, help='epoch num', required=True)
     return parser
 
 

@@ -11,19 +11,19 @@ from utils.id_freq_dict import IdFreqDict
 class Document:
     def __init__(self):
         self.clear()
-    
+
     def clear(self):
         self.docid = self.topic = self.text = self.tokens = self.tokenids = None
         self.pos_fill = self.neg_fill = self.tf = self.tfidf = None
-    
+
     def set(self, docid, topic, text):
         self.docid, self.topic, self.text = docid, topic, text
         return self
-    
+
     def to_dict(self):
         attrs = ['docid', 'topic', 'text', 'tokens', 'tokenids']
         return Od([(k, getattr(self, k)) for k in attrs])
-    
+
     def from_dict(self, d):
         self.clear()
         for k, v in d.items():
@@ -161,5 +161,5 @@ def word_verify(len_min, len_max, alpha_thres, stop_corpus):
         is_stop = word in stop_corpus if stop_corpus else False
         enough_alpha = pu.has_enough_alpha(word, alpha_thres) if alpha_thres else True
         return len_valid and enough_alpha and not is_stop
-    
+
     return is_valid_word

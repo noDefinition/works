@@ -30,7 +30,7 @@ def fit_kernel_pca(x, n_components, kernel='rbf', *args, **kwargs):
 def fit_pca(x, n_components, *args, **kwargs):
     pca = PCA(n_components=n_components, *args, **kwargs)
     pca.fit(x)
-    print('component portion:', pca.explained_variance_ratio_[:10])
+    # print('component portion:', pca.explained_variance_ratio_[:10])
     return pca.transform(x)
 
 

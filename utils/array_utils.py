@@ -13,21 +13,21 @@ def merge(array):
     return res
 
 
-def group_data_frame(data_frame, column):
-    value_set = sorted(set(data_frame[column]))
-    return [(Od([(column, v)]), data_frame[data_frame[column] == v]) for v in value_set]
-
-
-def group_data_frame_columns(data_frame, columns):
-    groups = [(Od(), data_frame)]
-    for col in columns:
-        for _ in range(len(groups)):
-            p_od, p_df = groups.pop(0)
-            for n_od, n_df in group_data_frame(p_df, col):
-                p_od = p_od.copy()
-                p_od.update(n_od)
-                groups.append((p_od, n_df))
-    return groups
+# def group_data_frame(data_frame, column):
+#     value_set = sorted(set(data_frame[column]))
+#     return [(Od([(column, v)]), data_frame[data_frame[column] == v]) for v in value_set]
+#
+#
+# def group_data_frame_columns(data_frame, columns):
+#     groups = [(Od(), data_frame)]
+#     for col in columns:
+#         for _ in range(len(groups)):
+#             p_od, p_df = groups.pop(0)
+#             for n_od, n_df in group_data_frame(p_df, col):
+#                 p_od = p_od.copy()
+#                 p_od.update(n_od)
+#                 groups.append((p_od, n_df))
+#     return groups
 
 
 def shuffle(array, inplace=False):

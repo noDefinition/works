@@ -1,8 +1,10 @@
-from utils.tune.arg_keys import *
+from utils.tune.arg_keys import X
 
-wit_ = 'wit'
-wtn_ = 'wtn'
-tmd_ = 'tmd'
 
-itp_ = 'itr'
-dmu_ = 'dmu'
+class J(X):
+    wit_ = 'wit'
+    wtn_ = 'wtn'
+    tmd_ = 'tmd'
+
+    itp_ = 'itp'
+    dmu_ = 'dmu'

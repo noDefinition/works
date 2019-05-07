@@ -104,7 +104,7 @@ def per_store_path(store_path):
 
     model_class = {v.__name__: v for v in [N5]}[model_name]
     model = model_class(args)
-    model.build(w_embed, c_embed)
+    model.build_model(w_embed, c_embed)
     print('model build over')
     sess = get_session(1, 0.1, allow_growth=True, run_init=True)
     model.set_session(sess)

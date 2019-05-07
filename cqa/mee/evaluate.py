@@ -17,9 +17,8 @@ class MeanRankScores:
     def is_better_than(self, other):
         if other is None:
             return True
-        multi = np.array([1, 0, 0])
-        return sum(self.get_mean() * multi) > sum(other.get_mean() * multi)
-        # return self.get_mean_scores()[0] > other.get_mean_scores()[0]
+        mask = np.array([1, 1, 1])
+        return sum(self.get_mean() * mask) > sum(other.get_mean() * mask)
 
 
 class RankScores:
@@ -34,7 +33,7 @@ class RankScores:
             else:
                 self.tpr[i] = self.tpr[i] + (i + 1,)
         self.sorted_tpr = sorted(self.tpr, key=lambda x: (-x[1], x[0]))
-        self.es = [self.NDCG(5), self.MAP(0), self.MRR()]
+        self.es = [self.NDCG(5), self.MAP(5), self.MRR()]
 
     def NDCG(self, k=5):
         def dcg_score(ranking):
@@ -48,7 +47,7 @@ class RankScores:
         idcg = dcg_score(self.tpr)
         return 1 if idcg < 1e-7 else dcg / idcg
 
-    def MAP(self, k=0):
+    def MAP(self, k=5):
         ps = []
         rank = [tpr[2] for tpr in self.sorted_tpr]
         if k:
@@ -58,7 +57,7 @@ class RankScores:
             a = i + 1
             b = 0
             for j in range(a):
-                if rank[k] <= a:
+                if rank[j] <= a:
                     b += 1
             ps.append(b / a)
         return np.mean(ps)

@@ -5,7 +5,7 @@ import numpy as np
 from utils import au, du, iu, pu
 
 
-class _Data:
+class Data:
     stem = True
     name = orgn = topic_num = None
     wf_flt_func = doc_flt_func = topic_flt_func = None
@@ -151,7 +151,7 @@ class _Data:
         raise RuntimeError('This function should be implemented in sub classes')
 
 
-class DataTREC(_Data):
+class DataTREC(Data):
     name = 'TREC'
     orgn = ['Tweets.txt']
     topic_num = 128
@@ -176,7 +176,7 @@ class DataTREC(_Data):
         du.dump_docarr(self.temp_file, du.make_docarr(outrows))
 
 
-class DataGoogle(_Data):
+class DataGoogle(Data):
     name = 'Google'
     orgn = ['News.txt']
     topic_num = 152
@@ -193,7 +193,7 @@ class DataGoogle(_Data):
         du.dump_docarr(self.temp_file, docarr)
 
 
-class DataEvent(_Data):
+class DataEvent(Data):
     name = 'Event'
     orgn = ['Terrorist']
     topic_num = 69
@@ -213,7 +213,7 @@ class DataEvent(_Data):
         du.dump_docarr(self.temp_file, docarr)
 
 
-class Data20ng(_Data):
+class Data20ng(Data):
     name = '20ng'
     orgn = ['20ng']
     topic_num = 20
@@ -233,7 +233,7 @@ class Data20ng(_Data):
         du.dump_docarr(self.temp_file, docarr)
 
 
-class DataReuters(_Data):
+class DataReuters(Data):
     name = 'Reuters'
     orgn = ['segments']
     topic_num = 31
@@ -270,7 +270,7 @@ class DataReuters(_Data):
         du.dump_docarr(self.temp_file, docarr)
 
 
-class DataR10K(_Data):
+class DataR10K(Data):
     name = 'R10K'
     orgn = ['data']
     topic_num = 4

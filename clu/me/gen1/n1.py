@@ -1,4 +1,4 @@
-from clu.me import *
+from clu.me import C
 from utils.deep.layers import *
 
 
@@ -8,16 +8,16 @@ class N1:
     file = __file__
 
     def __init__(self, args: dict):
-        self.m_dim = args[md_]
-        self.n_num = args[ns_]
-        self.use_bn = args[bn_]
-        self.smooth = args[smt_]
-        self.margin = args[mgn_]
-        self.l_reg = [args[l1_], args[l2_], args[l3_], args[l4_]]
-        # self.w_train = args[wtrn_]
-        # self.c_train = args[ctrn_]
+        self.m_dim = args[C.md_]
+        self.n_num = args[C.ns_]
+        self.use_bn = args[C.bn_]
+        self.smooth = args[C.smt_]
+        self.margin = args[C.mgn_]
+        self.l_reg = [args[C.l1_], args[C.l2_], args[C.l3_], args[C.l4_]]
+        # self.w_train = args[C.wtrn_]
+        # self.c_train = args[C.ctrn_]
         self.x_init = tf.contrib.layers.xavier_initializer()
-        self.n_init = tf.random_normal_initializer(mean=0., stddev=args[sc_])
+        self.n_init = tf.random_normal_initializer(mean=0., stddev=args[C.sc_])
 
     @staticmethod
     def _get_variable(name, init, train):
