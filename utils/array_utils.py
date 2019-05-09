@@ -3,7 +3,10 @@ from collections import Counter, OrderedDict as Od
 import numpy as np
 from sklearn import metrics
 
-eval_scores = ('acc', 'ari', 'nmi')
+s_nmi = 'nmi'
+s_acc = 'acc'
+s_ari = 'ari'
+eval_scores = (s_acc, s_ari, s_nmi)
 
 
 def merge(array):
@@ -55,10 +58,10 @@ def count_occurence(y1, y2):
 
 def score(y_true, y_pred, using_score):
     func = {
-        'acc': acc,
-        'ari': metrics.adjusted_rand_score,
+        s_acc: acc,
+        s_ari: metrics.adjusted_rand_score,
+        s_nmi: metrics.normalized_mutual_info_score,
         'auc': metrics.roc_auc_score,
-        'nmi': metrics.normalized_mutual_info_score,
     }[using_score.lower()]
     return round(float(func(y_true, y_pred)), 4)
 

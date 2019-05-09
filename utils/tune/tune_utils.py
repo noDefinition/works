@@ -106,6 +106,7 @@ def run_od_list(cmd_pre, od_list, dev_ids, dev_max, func=run_on_gpu, callback=ru
     else:
         raise ValueError('dev_max invalid: {}'.format(dev_max))
     max2frac = {i: round(1 / (1.15 * i), 2) for i in range(1, 5)}
+    max2frac[1] = 0.2
     args_list = [(od, device2max, max2frac, cmd_pre) for od in od_list]
     auto_gpu(func, args_list, device2max, callback)
 

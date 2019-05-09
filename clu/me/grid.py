@@ -2,35 +2,36 @@ from clu.data.datasets import *
 from clu.me import *
 from clu.me.gen1 import *
 from utils import Nodes, iu, tu
+from clu.me import C
 
 
 def get_args():
     parser = tu.get_common_parser()
     _ = parser.add_argument
-    _(cn_, type=int, help='model: cluster num')
-    _(sc_, type=float, help='model: scale for normal init')
-    _(md_, type=int, default=None, help='model: model inner dim')
-    _(bs_, type=int, help='runtime: pos batch size')
-    _(ns_, type=int, help='runtime: neg batch num')
+    _(C.cn, type=int, help='model: cluster num')
+    _(C.sc, type=float, help='model: scale for normal init')
+    _(C.md, type=int, default=None, help='model: model inner dim')
+    _(C.bs, type=int, help='runtime: pos batch size')
+    _(C.ns, type=int, help='runtime: neg batch num')
 
-    _(l1_, type=float, default=None, help='model: lambda for negative samples')
-    _(l2_, type=float, default=None, help='model: lambda for cluster similarity')
-    _(l3_, type=float, default=None, help='model: lambda for point-wise loss')
-    _(l4_, type=float, default=None, help='model: lambda for regularization loss')
+    _(C.l1, type=float, default=None, help='model: lambda for negative samples')
+    _(C.l2, type=float, default=None, help='model: lambda for cluster similarity')
+    _(C.l3, type=float, default=None, help='model: lambda for point-wise loss')
+    _(C.l4, type=float, default=None, help='model: lambda for regularization loss')
 
-    _(mgn_, type=float, default=1., help='model: margin in hinge loss')
-    _(bn_, type=int, default=None, help='model: if use batch normalization')
-    _(smt_, type=float, default=None, help='model: smoothness of cross entropy')
+    _(C.mgn, type=float, default=1., help='model: margin in hinge loss')
+    _(C.bn, type=int, default=None, help='model: if use batch normalization')
+    _(C.smt, type=float, default=None, help='model: smoothness of cross entropy')
 
-    _(wini_, type=int, default=None, help='word embed 0:random, 1:pre-trained')
-    _(cini_, type=int, default=None, help='cluster embed 0:random, 1:pre-trained')
-    _(wtrn_, type=int, default=None, help='if train word embedding')
-    _(ctrn_, type=int, default=None, help='if train cluster embedding')
+    _(C.wini, type=int, default=None, help='word embed 0:random, 1:pre-trained')
+    _(C.cini, type=int, default=None, help='cluster embed 0:random, 1:pre-trained')
+    _(C.wtrn, type=int, default=None, help='if train word embedding')
+    _(C.ctrn, type=int, default=None, help='if train cluster embedding')
 
-    _(ptn_, type=int, default=None, help='epoch num for pre-training')
-    _(worc_, type=int, default=None, help='0:word noise, 1: embed noise')
-    _(eps_, type=float, default=None, help='epsilon for adv grad')
-    _(tpk_, type=int, default=None, help='top k for word feature')
+    _(C.ptn, type=int, default=None, help='epoch num for pre-training')
+    _(C.worc, type=int, default=None, help='0:word noise, 1: embed noise')
+    _(C.eps, type=float, default=None, help='epsilon for adv grad')
+    _(C.tpk, type=int, default=None, help='top k for word feature')
     return tu.parse_args(parser)
 
 
@@ -41,12 +42,12 @@ def grid_od_list(datas, vers):
         # return (np.array([int(i * clu_num / 2) for i in range(1, 11)])).astype(int).tolist()
 
     LY = tu.LY
-    com_ly = LY(((lid_, list(range(5))), (ep_, [100]), (bs_, [64]), (ns_, [16]),))
-    # dat_ly = LY(*[((dn_, [d.name]), (cn_, [d.topic_num]),) for d in datas])
-    dat_ly = LY(*[((dn_, [d.name]), (cn_, diff_c_num(d.topic_num)),) for d in datas])
+    com_ly = LY(((C.lid, list(range(5))), (C.ep, [3]), (C.bs, [64]), (C.ns, [16]),))
+    dat_ly = LY(*[((C.dn, [d.name]), (C.cn, [d.topic_num]),) for d in datas])
+    # dat_ly = LY(*[((dn_, [d.name]), (cn_, diff_c_num(d.topic_num)),) for d in datas])
     ver_ly = LY()
     for v in vers:
-        tmp_ly = LY(((vs_, [v.__name__]),))
+        tmp_ly = LY(((C.vs, [v.__name__]),))
         # if v == N6:
         #     part1 = LY((
         #         (l3_, [0]),
@@ -97,11 +98,11 @@ def grid_od_list(datas, vers):
         #     tmp_ly *= part1
         if v == N6:
             part1 = LY((  # different cluster num
-                (l3_, [0]),
+                (C.l3, [0]),
             ), (
-                (l3_, [1]), (worc_, [1]), (eps_, [50]),
+                (C.l3, [1]), (C.worc, [1]), (C.eps, [50]),
             )) * LY((
-                (l1_, [1]), (l2_, [1]),
+                (C.l1, [1]), (C.l2, [1]),
             ))
             tmp_ly *= part1
         ver_ly += tmp_ly
@@ -111,7 +112,7 @@ def grid_od_list(datas, vers):
 def main():
     datas, gpu_ids, gpu_max, vers = Nodes.select(
         # n1702=([DataEvent, DataTREC, DataGoogle], [0, 1], 3, [N6, N7]),
-        ngpu=([DataEvent, DataTREC, DataGoogle], [0, 1, 2, 3], 2, [N6]),
+        ngpu=([DataEvent, DataTREC, DataGoogle], [3], 1, [N6]),
     )
     names = [v.__name__ for v in vers] + [d.name for d in datas] + ['c_num_3']
     iu.rmtree('./__pycache__')

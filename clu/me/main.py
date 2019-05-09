@@ -13,14 +13,14 @@ class Runner:
         self.gpu_frac = args[C.gp]
         self.epoch_num = args[C.ep]
         self.batch_size = args[C.bs]
-        self.neg_size = args[C.ns_]
+        self.neg_size = args[C.ns]
         self.data_name = args[C.dn]
         self.model_name = args[C.vs]
 
-        self.w_init = args[C.wini_]
-        self.c_init = args[C.cini_]
+        self.w_init = args[C.wini]
+        self.c_init = args[C.cini]
         self.scale = args[C.sc]
-        self.c_num = args[C.cn_]
+        self.c_num = args[C.cn]
 
         self.log_path = args[C.lg]
         entries = [(k, v) for k, v in args.items() if v is not None]
@@ -46,7 +46,7 @@ class Runner:
         self.logger.info(info)
 
     def get_model_class(self):
-        return {v.__name__: v for v in [N6, N7]}[self.model_name]
+        return {v.__name__: v for v in [N6]}[self.model_name]
 
     def get_writer(self, sess):
         def summary_details(fd):
@@ -79,7 +79,7 @@ class Runner:
         #     w_embed = np.random.normal(0., self.scale, size=w_embed.shape)
         #     c_embed = np.random.normal(0., self.scale, size=c_embed.shape)
         model = self.get_model_class()(self.args)
-        model.build_model(w_embed, c_embed)
+        model.build(w_embed, c_embed)
         sess = get_session(self.gpu_id, self.gpu_frac, allow_growth=True, run_init=True)
         model.set_session(sess)
         # summary_details, summary_scores = self.get_writer(sess)

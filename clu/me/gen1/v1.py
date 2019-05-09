@@ -1,5 +1,5 @@
-from me.layers import *
-from me import *
+from utils.deep.layers import *
+from clu.me import *
 
 
 # noinspection PyAttributeOutsideInit
@@ -8,11 +8,11 @@ class V1:
     file = __file__
 
     def __init__(self, args):
-        self.m_dim = args[md_]
-        self.scale = args[sc_]
-        self.n_num = args[ns_]
-        self.margin = args[mgn_]
-        self.l_reg = [args[l1_], args[l2_], args[l3_], args[l4_]]
+        self.m_dim = args[C.md]
+        self.scale = args[C.sc]
+        self.n_num = args[C.ns]
+        self.margin = args[C.mgn]
+        self.l_reg = [args[C.l1], args[C.l2], args[C.l3], args[C.l4]]
         self.pc_probs = self.loss = None
 
     def define_embed(self, w_init, c_init, w_train=True, c_train=True):

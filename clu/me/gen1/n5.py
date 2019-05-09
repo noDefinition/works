@@ -8,8 +8,8 @@ class N5(N1):
 
     def __init__(self, args: dict):
         super(N5, self).__init__(args)
-        self.worc = args[C.worc_]
-        self.eps = args[C.eps_]
+        self.worc = args[C.worc]
+        self.eps = args[C.eps]
 
     def define_cluster_embed(self, init):
         super(N5, self).define_cluster_embed(init)

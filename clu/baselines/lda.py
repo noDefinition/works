@@ -3,47 +3,81 @@ from collections import OrderedDict as Od
 import pandas as pd
 from sklearn.decomposition import LatentDirichletAllocation as LDA
 
-import utils.io_utils as fu
-import utils.multiprocess_utils as mu
+from utils import iu, mu, tu
 from clu.data.datasets import *
 
 
 def run_multi_and_output(func, batch_size, args_list, result_file):
     res_list = mu.multi_process_batch(func, batch_size, args_list)
-    fu.dump_array(result_file, res_list)
+    iu.dump_array(result_file, res_list)
 
 
-def run_lda(d_class, lda_kwargs):
-    print(lda_kwargs)
+def run_lda(kwargs: dict):
+    print(kwargs)
+    kwargs_copy = kwargs.copy()
+    d_class: Data = name2d_class[kwargs.pop('dname')]
     matrix, topics = d_class().get_matrix_topics(using='tf')
-    x_new = LDA(**lda_kwargs, n_jobs=1).fit_transform(matrix)
+    x_new = LDA(**kwargs, n_jobs=1).fit_transform(matrix)
     clusters = np.argmax(x_new, axis=1)
-    lda_kwargs.pop('learning_method')
-    lda_kwargs.pop('random_state')
-    return lda_kwargs, topics.tolist(), clusters.tolist()
+    kwargs_copy.pop('learning_method')
+    kwargs_copy.pop('random_state')
+    return kwargs_copy, au.scores(topics, clusters)
+    # return lda_kwargs, topics.tolist(), clusters.tolist()
 
 
-def run_lda_using_kwargs(d_class, result_file):
-    nv_list = {
-        DataTREC: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1, 0.01])],
-        DataGoogle: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1, 0.01])],
-        DataEvent: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [1., 0.1])],
-        DataReuters: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1])],
-        Data20ng: [('doc_topic_prior', [1]), ('topic_word_prior', [1., 0.1, 0.01])],
-    }[d_class]
-    common = [
+def run_lda_using_kwargs(result_file):
+    rerun_num = 2
+    ratios = np.concatenate([np.arange(0.2, 1, 0.2), np.arange(1, 5.1, 0.5)])
+    common = tu.LY((
         ('max_iter', [200, ]),
         ('learning_method', ['batch', ]),
-        ('random_state', [i * 87345 for i in range(2)]),
-        ('n_components', [d_class.topic_num]),
-    ]
-    args_list = [(d_class, g) for g in au.grid_params(nv_list + common)]
-    print(len(args_list))
-    run_multi_and_output(run_lda, 8, args_list, result_file)
+        ('random_state', [i + 512697 for i in range(rerun_num)]),
+    ))
+    datas = tu.LY((
+        ('dname', [DataTREC.name]),
+        ('doc_topic_prior', [0.1, 0.01]),
+        ('topic_word_prior', [0.1, 0.01]),
+        ('n_components', (ratios * DataTREC.topic_num).astype(np.int32)),
+    ), (
+        ('dname', [DataGoogle.name]),
+        ('doc_topic_prior', [0.1, 0.01]),
+        ('topic_word_prior', [0.1, 0.01]),
+        ('n_components', (ratios * DataGoogle.topic_num).astype(np.int32)),
+    ), (
+        ('dname', [DataEvent.name]),
+        ('doc_topic_prior', [0.1, 0.01]),
+        ('topic_word_prior', [1., 0.1]),
+        ('n_components', (ratios * DataEvent.topic_num).astype(np.int32)),
+    ))
+    # nv_list = {
+    #     DataTREC: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1, 0.01])],
+    #     DataGoogle: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1, 0.01])],
+    #     DataEvent: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [1., 0.1])],
+    #     # DataReuters: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1])],
+    #     # Data20ng: [('doc_topic_prior', [1]), ('topic_word_prior', [1., 0.1, 0.01])],
+    # }[d_class]
+    # common = [
+    #     ('max_iter', [200, ]),
+    #     ('learning_method', ['batch', ]),
+    #     ('random_state', [i * 1605349 for i in range(4)]),
+    #     ('n_components', [d_class.topic_num * r for r in ratios]),
+    # ]
+    # args_list = [(d_class, g) for g in au.grid_params(nv_list + common)]
+    od_list = (common * datas).eval()
+    print(len(od_list))
+    res_list = mu.multi_process_batch(run_lda, 19, [(od,) for od in od_list])
+    print(len(res_list))
+    df = pd.DataFrame()
+    for idx, (kwargs, scores) in enumerate(res_list):
+        for k, v in kwargs.items():
+            df.loc[idx, k] = v
+        for k, v in scores.items():
+            df.loc[idx, k] = v
+    df.to_csv(result_file)
 
 
 def analyze_mean_and_stderr(result_file):
-    arg_tpc_clu_list = fu.load_array(result_file)
+    arg_tpc_clu_list = iu.load_array(result_file)
     rows = list()
     for kwargs, topics, clusters in arg_tpc_clu_list:
         s2v = Od((s, au.score(topics, clusters, s)) for s in au.eval_scores)
@@ -110,10 +144,10 @@ if __name__ == '__main__':
 
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-
+    run_lda_using_kwargs('lda_results.csv')
+    exit()
     # one_run_for_word_distribution()
     # exit()
-
     for _d_class in [Data20ng]:
         print('Using data:', _d_class.name)
         _topic_clu_file = 'LDA_{}.txt'.format(_d_class.name)

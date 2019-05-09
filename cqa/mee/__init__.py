@@ -11,6 +11,7 @@ class K(X):
 
     temp = 'temp'
     woru = 'woru'
+    topk = 'topk'
     eps = 'eps'
     atp = 'atp'
     mtp = 'mtp'

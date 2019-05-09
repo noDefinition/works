@@ -6,7 +6,7 @@ from cqa.mee.evaluate import MeanRankScores
 from cqa.data.datasets import name2d_class, DataSo, DataZh
 from utils.deep.funcs import get_session, init_session
 from utils import iu, lu, au, Nodes
-from cqa.mee.models import name2m_class, B1, V1, CCC
+from cqa.mee.models import name2m_class, CCC, B1
 from cqa.mee import K
 import numpy as np
 
@@ -168,10 +168,10 @@ class Runner:
             close_pbar()
             exit() if not self.is_full_data else None
 
-    def evaluate_qauv(self, data, dnum, desc):
+    def evaluate_qauv(self, qauv_list, dnum, desc):
         update_pbar, close_pbar = start_pbar(ncols=30, desc=desc)
         mrs = MeanRankScores()
-        for idx, (ql, al, ul, vl) in enumerate(data):
+        for idx, (ql, al, ul, vl) in enumerate(qauv_list):
             pl = self.model.predict(ql, al, ul)
             mrs.append(vl, pl)
             update_pbar(idx, dnum)

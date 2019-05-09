@@ -7,61 +7,62 @@ from cqa.mee import K
 class GridMee:
     def __init__(self):
         self.datas, self.vers, self.gpu_ids, self.gpu_max = Nodes.select(
-            n1702=([DataZh, DataSo], [AAAI17], [0, ], 2),
-            ngpu=([DataSo, DataZh], [IJCAI15], [0, 2], 1),
+            # n1702=([DataZh, DataSo], [P3], [0, 1], 1),
+            ngpu=([DataSo, DataZh], [P3], [0, 1, 2], 1),
         )
         # self.use_fda = 0 if len(self.gpu_ids) * self.gpu_max <= 1 else 1
         self.use_fda = 1
-        self.comment = 'have_a_try'
+        self.comment = 'without_doc_or_user'
 
     def grid_od_list(self):
         LY = tu.LY
         common_ly = LY((
             (K.ep, [20]), (K.es, [6]), (K.lr, [1e-4]),
             (K.dn, [d.name for d in self.datas]), (K.fda, [self.use_fda]),
-            (K.lid, list(range(5))),
+            (K.lid, list(range(3))),
         ))
         vers_ly = LY()
         for v in self.vers:
             tmp_ly = LY(((K.vs, [v.__name__]),))
-            if v == V1 or v == V5 or v == P1 or v == P2:
-                tmp_ly *= LY((
-                    (K.reg, [0, 1, 1e-2]),
-                ))
-            if v == U1:
-                tmp_ly *= LY((
-                    # (K.reg, [0, 1]),
-                    # )) * LY((
-                    (K.woru, [0]),
-                ), (
-                    (K.woru, [1, 2]),
-                    (K.eps, [100, 1000, 10000]),
-                ))
-            if v == W1:
-                tmp_ly *= LY((
-                    # (K.reg, [1e-2]),
-                    (K.reg, [0, 1, 1e-2]),
-                    (K.eps, [0, 1e-1, 1e-2, 1e-3]),
-                ))
-            if v == S1:
-                tmp_ly *= LY((
-                    (K.mix, [0, 0.5, 1, 2]),
-                ))
-            if v == S2:
-                tmp_ly *= LY((
-                    (K.mix, [0, 0.5, 2]),
-                    (K.dpt, [1, 3]),
-                    (K.act, [0]),
-                    # (K.act, [0, 1, 2]),
-                ))
+            # if v == V1 or v == V5 or v == P1 or v == P2:
+            #     tmp_ly *= LY((
+            #         (K.reg, [0, 1, 1e-2]),
+            #     ))
+            # if v == U1:
+            #     tmp_ly *= LY((
+            #         # (K.reg, [0, 1]),
+            #         # )) * LY((
+            #         (K.woru, [0]),
+            #     ), (
+            #         (K.woru, [1, 2]),
+            #         (K.eps, [100, 1000, 10000]),
+            #     ))
+            # if v == W1:
+            #     tmp_ly *= LY((
+            #         # (K.reg, [1e-2]),
+            #         (K.reg, [0, 1, 1e-2]),
+            #         (K.eps, [0, 1e-1, 1e-2, 1e-3]),
+            #     ))
+            # if v == S1:
+            #     tmp_ly *= LY((
+            #         (K.mix, [0, 0.5, 1, 2]),
+            #     ))
+            # if v == S2:
+            #     tmp_ly *= LY((
+            #         (K.mix, [0, 0.5, 2]),
+            #         (K.dpt, [1, 3]),
+            #         (K.act, [0]),
+            #         # (K.act, [0, 1, 2]),
+            #     ))
             if v == P3:
                 tmp_ly *= LY((
-                    (K.dpt, [4]),
-                    (K.act, [0, 1, 2]),
+                    (K.woru, [0, 1, 2]),
+                    (K.topk, [5, 10, 20]),
                 ))
-            # if v == AAAI15:
+            # if v == P4:
             #     tmp_ly *= LY((
-            #         (K.act, [0, 1, 2]),
+            #         (K.woru, [0, 1, 2]),
+            #         (K.topk, [5, 10, 20]),
             #     ))
             vers_ly += tmp_ly
         return (common_ly * vers_ly).eval()
@@ -79,6 +80,7 @@ class GridMee:
         _(K.temp, type=float, default=0, help='temperature in kl/softmax')
 
         _(K.woru, type=int, help='adv noise for word/user, 0=no adv')
+        _(K.topk, type=int, help='topk for mean pooling')
         _(K.eps, type=float, help='epsilon for adv gradient')
         _(K.atp, type=int, help='adv type')
 

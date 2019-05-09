@@ -12,7 +12,8 @@ class Data:
 
     def __init__(self):
         def fill(files):
-            base = '/home/cdong/works/research/input_and_outputs/short_text_corpus'
+            # base = '/home/cdong/works/research/input_and_outputs/short_text_corpus'
+            base = '/home/cdong/works/clu/data/input_and_outputs/short_text_corpus'
             return [iu.join(base, self.name, f) for f in files]
 
         self.orgn_file, = fill(self.orgn)

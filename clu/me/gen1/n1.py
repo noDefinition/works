@@ -8,16 +8,16 @@ class N1:
     file = __file__
 
     def __init__(self, args: dict):
-        self.m_dim = args[C.md_]
-        self.n_num = args[C.ns_]
-        self.use_bn = args[C.bn_]
-        self.smooth = args[C.smt_]
-        self.margin = args[C.mgn_]
-        self.l_reg = [args[C.l1_], args[C.l2_], args[C.l3_], args[C.l4_]]
-        # self.w_train = args[C.wtrn_]
-        # self.c_train = args[C.ctrn_]
+        self.m_dim = args[C.md]
+        self.n_num = args[C.ns]
+        self.use_bn = args[C.bn]
+        self.smooth = args[C.smt]
+        self.margin = args[C.mgn]
+        self.l_reg = [args[C.l1], args[C.l2], args[C.l3], args[C.l4]]
+        # self.w_train = args[C.wtrn]
+        # self.c_train = args[C.ctrn]
         self.x_init = tf.contrib.layers.xavier_initializer()
-        self.n_init = tf.random_normal_initializer(mean=0., stddev=args[C.sc_])
+        self.n_init = tf.random_normal_initializer(mean=0., stddev=args[C.sc])
 
     @staticmethod
     def _get_variable(name, init, train):

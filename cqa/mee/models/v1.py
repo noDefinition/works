@@ -45,6 +45,7 @@ class V1(object):
 
     def define_inputs(self):
         self.is_train = tf.placeholder_with_default(False, shape=())
+        self.dropout_keep_prob = tf.placeholder_with_default(1.0, shape=())
         ans_num = None
         self.qwid = tf.placeholder(i32, (self.len_q,), name='qwid')
         self.uint_seq = tf.placeholder(i32, (ans_num,), name='uint_seq')
@@ -176,7 +177,7 @@ class V1(object):
 
     def train_step(self, qwid, awids, uints, votes, *args, **kwargs):
         fd = self.get_fd(qwid, awids, uints, votes)
-        fd[self.is_train] = True
+        fd.update({self.is_train: True, self.dropout_keep_prob: self.dropout})
         self.sess.run(self.train_op, feed_dict=fd)
 
     def get_loss(self, qwid, awids, uints, votes):

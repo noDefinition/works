@@ -1,8 +1,9 @@
 import pandas as pd
 
-from clu.baselines.lda import run_multi_and_output
+# from clu.baselines.lda import run_multi_and_output
 from clu.data.datasets import *
 from utils.id_freq_dict import IdFreqDict
+from utils import iu, mu, tu
 
 
 class GSDMM:
@@ -139,31 +140,72 @@ class GSDMM:
                 cluster.update_by_twh(self, factor=1)
 
 
-def run_gsdmm(d_class, gsdmm_kwargs):
-    print(gsdmm_kwargs)
+def run_gsdmm(kwargs: dict):
+    print(kwargs)
+    kwargs_copy = kwargs.copy()
+    d_class: Data = name2d_class[kwargs.pop('dname')]
     docarr = d_class().load_docarr()
     g = GSDMM()
-    g.set_hyperparams(**gsdmm_kwargs)
+    g.set_hyperparams(**kwargs)
     g.input_docarr(docarr)
     g.fit()
     nmi_list, ari_list, acc_list = g.get_score_lists()
-    gsdmm_kwargs.pop('seed')
-    return gsdmm_kwargs, nmi_list, ari_list, acc_list
+
+    def mean_of_max(arr):
+        return np.mean(sorted(arr)[-10:])
+
+    kwargs_copy.pop('seed')
+    scores = {au.s_acc: mean_of_max(acc_list),
+              au.s_ari: mean_of_max(ari_list),
+              au.s_nmi: mean_of_max(nmi_list)}
+    return kwargs_copy, scores
 
 
-def run_gsdmm_using_kwargs(d_class, result_file):
-    nv_list = {
-        DataTREC: [('alpha', [0.01]), ('beta', [0.01])],
-        DataGoogle: [('alpha', [1, 0.1]), ('beta', [0.01])],
-        DataEvent: [('alpha', [1, 0.1, 0.01]), ('beta', [1, 0.1, 0.01])],
-        DataReuters: [('alpha', [1, 0.1, 0.01]), ('beta', [0.1])],
-        Data20ng: [('alpha', [1, 0.1, 0.01]), ('beta', [0.1])],
-    }[d_class]
-    common = [('iter_num', [100]), ('k', [d_class().topic_num]),
-              ('seed', [(i + 34) for i in range(3)])]
-    args_list = [(d_class, g) for g in au.grid_params(nv_list + common)]
-    print(len(args_list))
-    run_multi_and_output(run_gsdmm, Nodes.max_cpu_num(), args_list, result_file)
+def run_gsdmm_using_kwargs(result_file):
+    rerun_num = 2
+    ratios = np.concatenate([np.arange(0.2, 1, 0.2), np.arange(1, 5.1, 0.5)])
+    # ratios = np.array([1, 2, 3])
+    # ('iter_num', [5]),
+    common = tu.LY((
+        ('iter_num', [100]),
+        ('seed', [(i + np.random.randint(0, 1000)) for i in range(rerun_num)]),
+    ))
+    datas = tu.LY((
+        ('dname', [DataTREC.name]),
+        ('alpha', [0.01]), ('beta', [0.01]),
+        ('k', (ratios * DataTREC.topic_num).astype(np.int32)),
+        ), (
+            ('dname', [DataGoogle.name]),
+            ('alpha', [1, 0.1]), ('beta', [0.01]),
+            ('k', (ratios * DataGoogle.topic_num).astype(np.int32)),
+        ), (
+            ('dname', [DataEvent.name]),
+            ('alpha', [1, 0.1, 0.01]), ('beta', [1, 0.1, 0.01]),
+            ('k', (ratios * DataEvent.topic_num).astype(np.int32)),
+    ))
+    od_list = (common * datas).eval()
+    print(len(od_list))
+    res_list = mu.multi_process_batch(run_gsdmm, 20, [(od,) for od in od_list])
+    print(len(res_list))
+    df = pd.DataFrame()
+    for idx, (kwargs, scores) in enumerate(res_list):
+        for k, v in kwargs.items():
+            df.loc[idx, k] = v
+        for k, v in scores.items():
+            df.loc[idx, k] = v
+    df.to_csv(result_file)
+    # nv_list = {
+    #     DataTREC: [('alpha', [0.01]), ('beta', [0.01])],
+    #     DataGoogle: [('alpha', [1, 0.1]), ('beta', [0.01])],
+    #     DataEvent: [('alpha', [1, 0.1, 0.01]), ('beta', [1, 0.1, 0.01])],
+    #     DataReuters: [('alpha', [1, 0.1, 0.01]), ('beta', [0.1])],
+    #     Data20ng: [('alpha', [1, 0.1, 0.01]), ('beta', [0.1])],
+    # }[d_class]
+    # common = [('iter_num', [100]), ('k', [d_class().topic_num]),
+    #           ('seed', [(i + 34) for i in range(3)])]
+    # args_list = [(d_class, g) for g in au.grid_params(nv_list + common)]
+    # print(len(args_list))
+    # run_multi_and_output(run_gsdmm, Nodes.max_cpu_num(), args_list, result_file)
 
 
 def run_one_d_class(d_cls):
@@ -187,6 +229,9 @@ def one_run_for_word_distribution():
 
 if __name__ == '__main__':
     from utils.node_utils import Nodes
+
+    run_gsdmm_using_kwargs('gsdmm_results.csv')
+    exit()
     # one_run_for_word_distribution()
     # exit()
 

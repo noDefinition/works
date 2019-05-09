@@ -1,16 +1,26 @@
 from .p1 import *
+from tensorflow.keras.layers import GRU, Bidirectional, Concatenate, RNN
 
 
 # noinspection PyAttributeOutsideInit
-class P3(P1):
-    """ 更深的pariwise """
+class P4(P1):
+    """ LSTM """
 
     def __init__(self, args):
-        super(P3, self).__init__(args)
+        super(P4, self).__init__(args)
         self.w_or_u = args.get(K.woru, None)
         self.topk = args.get(K.topk, None)
         assert isinstance(self.w_or_u, int)
         assert isinstance(self.topk, int) and 1 <= self.topk
+
+    def embed_gru(self, inputs):
+        with tf.variable_scope('recurrent', reuse=tf.AUTO_REUSE):
+            dropout = self.dropout_keep_prob
+            gru_cell = GRU(self.dim_w, dropout=dropout, recurrent_dropout=dropout)
+            init_state = gru_cell.zero_state(tf.shape(inputs)[0], f32)
+            init_state = tf.tile(tf.zeros([1, ]))
+            gru_out = Bidirectional(gru_cell).__call__(inputs=inputs, initial_state=init_state)
+        return
 
     def forward(self):
         uas = [(self.dim_w, tanh)]
