@@ -1,6 +1,7 @@
 import pandas as pd
 from utils import iu, au
 from cqa.mee import K
+from cqa.mee.evaluate import MeanRankScores
 
 pd.set_option('display.max_columns', 1000)
 pd.set_option('display.width', 1000)
@@ -13,7 +14,7 @@ class AnalyzeMee:
         self.parser.add_argument('-c', action='store_true', default=False, help='if choose path')
         self.parser.add_argument('-s', action='store_true', default=False, help='if summary to csv')
         self.parser.add_argument('-d', action='store_true', default=False, help='if show detail')
-        self.exclude = {K.gi, K.gp, K.es, K.ep, K.sc, K.lid, K.fda, K.bs, K.drp}
+        self.exclude = {K.lid, K.gi, K.gp, K.es, K.ep, }
         self.args = self.parser.parse_args()
 
     def should_summary(self):
@@ -21,8 +22,8 @@ class AnalyzeMee:
 
     def get_log_path(self):
         cand_paths = iu.list_children('./', iu.DIR, r'^log\d', full_path=True)
-        if len(cand_paths) == 0:
-            cand_paths = iu.list_children('./logs', iu.DIR, r'^log\d', full_path=True)
+        # if len(cand_paths) == 0:
+        cand_paths += iu.list_children('./logs', iu.DIR, r'^log\d', full_path=True)
         log_path = iu.choose_from(cand_paths) if self.args.c else iu.most_recent(cand_paths)
         return log_path
 
@@ -61,47 +62,47 @@ class AnalyzeMee:
         pre = 't'
         table[temp] = table['%s_NDCG' % pre] + table['%s_MAP' % pre] + table['%s_MRR' % pre]
         table = table.sort_values(by=temp)
-        table.drop([temp, K.lr, K.reg], axis=1, inplace=True)
-        # table = table.query('dpt=="1"')
+        table.drop([temp, K.lr, K.reg, K.gid, K.ep], axis=1, inplace=True)
         if self.args.s:
             table.to_csv(iu.join(log_path, 'summary.csv'))
 
-        # print(table.columns)
-        # print(table)
-        # group_col = [K.dn, K.mix, K.act, K.dpt]
-
-        for value, df in table.groupby(K.vs):
-            df.pop(K.ep)
-            print(value)
-            print(df)
-            mean = df.groupby(K.dn).mean()
-            print(mean)
-            mean.to_csv('%s.csv' % value)
+        # group_col = [K.dn, K.atp, K.vs]
+        group_col = [K.dn, K.woru, K.topk]
+        res = pd.DataFrame()
+        idx = 0
+        for value, df in table.groupby(group_col):
+            dic = dict(zip(group_col, value))
+            mean = df.drop(group_col, axis=1).mean()
+            dic.update(mean.to_dict())
+            for k, v in dic.items():
+                res.loc[idx, k] = v
+            idx += 1
+        print(res)
+        res.to_csv('mean.csv')
         return
 
-        group_col = [K.dn]
-        grouped = table.groupby(group_col)
-        kv_df_list = list()
-        summ = pd.DataFrame()
-        import numpy as np
-        for idx, (values, table) in enumerate(grouped):
-            # print(list(zip(group_col, values)))
-            kv = dict(zip(group_col, values))
-            kv['final'] = np.mean(table['v_NDCG'] + table['v_MAP'] + table['v_MRR']) / 3
-            kv['final'] = kv['final'].round(3)
-            kv_df_list.append([kv, table])
-            columns = ['%s_%s' % (a, b) for a in ['v', 't'] for b in ['NDCG', 'MAP', 'MRR']]
-            s = table[columns].mean(0)
-            print(dict(s))
-            # print(s.index)
-            # print(s[s.index])
-            # print(list(s.data))
-            # summ.loc[idx, 'data'] = values
-            # summ.loc[idx, columns] = list(s.data)
-            summ.append(dict(s), ignore_index=True)
-            # print(table, '\n')
-        print(summ)
-
+        # group_col = [K.dn]
+        # grouped = table.groupby(group_col)
+        # kv_df_list = list()
+        # summ = pd.DataFrame()
+        # import numpy as np
+        # for idx, (values, table) in enumerate(grouped):
+        #     # print(list(zip(group_col, values)))
+        #     kv = dict(zip(group_col, values))
+        #     kv['final'] = np.mean(table['v_NDCG'] + table['v_MAP'] + table['v_MRR']) / 3
+        #     kv['final'] = kv['final'].round(3)
+        #     kv_df_list.append([kv, table])
+        #     columns = ['%s_%s' % (a, b) for a in ['v', 't'] for b in ['NDCG', 'MAP', 'MRR']]
+        #     s = table[columns].mean(0)
+        #     print(dict(s))
+        #     # print(s.index)
+        #     # print(s[s.index])
+        #     # print(list(s.data))
+        #     # summ.loc[idx, 'data'] = values
+        #     # summ.loc[idx, columns] = list(s.data)
+        #     summ.append(dict(s), ignore_index=True)
+        #     # print(table, '\n')
+        # print(summ)
 
         # sum_df = pd.DataFrame()
         # kv_df_list = sorted(kv_df_list, key=lambda x: x[0]['final'])
@@ -121,6 +122,79 @@ class AnalyzeMee:
         # print
         # sum_df.to_csv('sum.csv')
 
+    def full_score_ver(self):
+        s_names = MeanRankScores.s_names
+        k_values = MeanRankScores.k_values
+        wanted_scores = ['t_{}@{}'.format(s, k) for s in s_names for k in k_values[1:3]]
+
+        log_path = self.get_log_path()
+        print('log path:', log_path)
+        best_list = list()
+        for file in iu.list_children(log_path, pattern=r'^gid.+\.txt$', full_path=True):
+            entries = au.name2entries(name=iu.get_name(file), postfix='.txt', exclude=self.exclude)
+            test_scores = [iu.loads(l) for l in iu.read_lines(file) if
+                           l.startswith('{') and 't_NDCG' in l]
+            # test_scores = [d for d in scores if 't_NDCG' in d]
+            if len(test_scores) == 0:
+                print(au.entries2name(entries), 'lacks test info')
+                continue
+            score_table = pd.DataFrame()
+            best_tests = test_scores[-3:]
+            for idx, rvs2scores in enumerate(best_tests):
+                for title, value in rvs2scores.items():
+                    score_table.loc[idx, title] = value
+            # score_table.pop('brk_cnt')
+            # score_table['ep'] = len(scores)
+            score_table = score_table.mean(axis=0).round(4)
+            score_table = score_table[wanted_scores]
+            best_list.append((dict(entries), score_table.to_dict()))
+
+        table = pd.DataFrame()
+        for i, (name2param, sname2score) in enumerate(best_list):
+            for k, v in list(name2param.items()) + list(sname2score.items()):
+                table.loc[i, k] = v
+        table.fillna('-', inplace=True)
+        print(table)
+
+        temp = 'mmm'
+        table[temp] = 0
+        for s in s_names:
+            for k in k_values[1:3]:
+                table[temp] += table['t_{}@{}'.format(s, k)]
+        table.sort_values(by=temp, inplace=True)
+
+        log_name = iu.get_name(log_path)
+        drop_col = {temp, K.lr, K.reg, K.gid, K.ep, K.fda, K.temp}
+        if 'lstm_wwoatt' in log_name:
+            group_col = [K.dn, K.vs, K.atp, K.topk]
+        elif 'AAAI' in log_name:
+            group_col = [K.dn, K.vs]
+        elif 'tune_topk' in log_name:
+            group_col = [K.dn, K.vs, K.woru, K.topk]
+            drop_col.add(K.drp)
+        elif 'only_user' in log_name:
+            group_col = [K.dn, K.vs, K.woru]
+            drop_col.add(K.topk)
+            drop_col.add(K.drp)
+        else:
+            raise ValueError('cdong: dont know how to organize hyperparams:', log_name)
+        table.drop(list(drop_col), axis=1, inplace=True, errors='ignore')
+
+        res = pd.DataFrame()
+        idx = 0
+        for value, df in table.groupby(group_col):
+            dic = dict(zip(group_col, value))
+            mean = df.drop(group_col, axis=1).mean()
+            dic.update(mean.to_dict())
+            for k, v in dic.items():
+                res.loc[idx, k] = v
+            idx += 1
+        print(res)
+        res.to_csv('{}.csv'.format(iu.get_name(log_path)))
+        if self.args.s:
+            table.to_csv(iu.join(log_path, '{}_summary.csv'.format(iu.get_name(log_path))))
+        return
+
 
 if __name__ == '__main__':
-    AnalyzeMee().main()
+    AnalyzeMee().full_score_ver()

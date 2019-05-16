@@ -1,6 +1,7 @@
 import multiprocessing as mp
-from argparse import ArgumentParser
 from subprocess import DEVNULL as V, Popen
+from typing import List, Tuple
+import types
 
 from utils import au, iu, tmu
 from utils.tune.arg_keys import X
@@ -8,12 +9,11 @@ from utils.tune.arg_keys import X
 
 class LY:
     def __init__(self, *pairs_list):
-        import types
         if len(pairs_list) == 1 and isinstance(pairs_list[0], types.GeneratorType):
             target = pairs_list[0]
         else:
             target = pairs_list
-        self.pairs_list = list(list(pairs) for pairs in target)
+        self.pairs_list: List[List[Tuple]] = list(list(pairs) for pairs in target)
 
     def __add__(self, other):
         """ 同级扩展 """
@@ -106,7 +106,8 @@ def run_od_list(cmd_pre, od_list, dev_ids, dev_max, func=run_on_gpu, callback=ru
     else:
         raise ValueError('dev_max invalid: {}'.format(dev_max))
     max2frac = {i: round(1 / (1.15 * i), 2) for i in range(1, 5)}
-    max2frac[1] = 0.2
+    max2frac[1] = 0.5
+    max2frac[2] = 0.3
     args_list = [(od, device2max, max2frac, cmd_pre) for od in od_list]
     auto_gpu(func, args_list, device2max, callback)
 
@@ -130,33 +131,3 @@ def update_od_list(od_list, log_path, shuffle):
     for i, od in enumerate(od_list):
         print(au.entries2name(od, inner='=', inter=' ')) if i <= 10 else None
     return od_list
-
-
-def get_common_parser() -> ArgumentParser:
-    def _(name, **kwargs):
-        prev('-' + name, **kwargs)
-
-    parser = ArgumentParser()
-    prev = parser.add_argument
-    parser.add_argument = _
-    # return parser
-    # parser = get_augmented_parser()
-    # _ = parser.add_argument
-    _(X.gid, type=int, help='global id', required=True)
-    _(X.lid, type=int, help='local id')
-    _(X.gi, type=int, help='gpu id number')
-    _(X.gp, type=float, help='gpu fraction')
-
-    _(X.lg, type=str, help='logging path')
-    _(X.dn, type=str, help='data name')
-    _(X.vs, type=str, help='model version')
-    _(X.ep, type=int, help='epoch num', required=True)
-    return parser
-
-
-def parse_args(parser: ArgumentParser) -> dict:
-    return dict((k, v) for k, v in parser.parse_args().__dict__.items())
-
-
-if __name__ == '__main__':
-    print(parse_args(get_common_parser()))

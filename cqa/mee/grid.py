@@ -1,5 +1,6 @@
-from cqa.data.datasets import DataSo, DataZh
+import re
 from utils import Nodes, tu, iu, tmu
+from cqa.data.datasets import DataSo, DataZh
 from cqa.mee.models import *
 from cqa.mee import K
 
@@ -7,18 +8,26 @@ from cqa.mee import K
 class GridMee:
     def __init__(self):
         self.datas, self.vers, self.gpu_ids, self.gpu_max = Nodes.select(
-            # n1702=([DataZh, DataSo], [P3], [0, 1], 1),
-            ngpu=([DataSo, DataZh], [P3], [0, 1, 2], 1),
+            n1702=([DataSo, DataZh], [P3], [0, 1], 1),
+            # ngpu=([DataSo, DataZh], [P4], [0, 1, 3], [2, 2, 2]),
+            ngpu=([DataSo, DataZh], [P4], [0, 1, 2], 1),
         )
         # self.use_fda = 0 if len(self.gpu_ids) * self.gpu_max <= 1 else 1
+        self.dnames = [d.name for d in self.datas]
         self.use_fda = 1
-        self.comment = 'without_doc_or_user'
+        # self.comment = 'tune_topk'
+        while True:
+            self.comment = input('comment:')
+            if re.findall('\W', self.comment):
+                print('invalid comment {}, reinput'.format(self.comment))
+                continue
+            break
 
     def grid_od_list(self):
         LY = tu.LY
         common_ly = LY((
             (K.ep, [20]), (K.es, [6]), (K.lr, [1e-4]),
-            (K.dn, [d.name for d in self.datas]), (K.fda, [self.use_fda]),
+            (K.dn, self.dnames), (K.fda, [self.use_fda]),
             (K.lid, list(range(3))),
         ))
         vers_ly = LY()
@@ -56,42 +65,25 @@ class GridMee:
             #     ))
             if v == P3:
                 tmp_ly *= LY((
-                    (K.woru, [0, 1, 2]),
-                    (K.topk, [5, 10, 20]),
+                    (K.woru, [0]), (K.topk, [int(1e9)]),
+                    # )) + LY((
+                    # (K.woru, [1, 2]),
+                    # (K.topk, [5, 10, 15, 20, 30, 40, 50]),
                 ))
-            # if v == P4:
-            #     tmp_ly *= LY((
-            #         (K.woru, [0, 1, 2]),
-            #         (K.topk, [5, 10, 20]),
-            #     ))
+            if v == P4:
+                tmp_ly *= LY((
+                    #     (K.ttp, [0]), (K.atp, [0]), (K.topk, [5]),
+                    # )) + LY((
+                    #     (K.ttp, [0]), (K.atp, [1]),
+                    # )) + LY((
+                    (K.ttp, [1]), (K.atp, [0, 1]), (K.drp, [0.3, 0]),
+                ))
             vers_ly += tmp_ly
         return (common_ly * vers_ly).eval()
 
-    @staticmethod
-    def get_args():
-        parser = tu.get_common_parser()
-        _ = parser.add_argument
-        _(K.fda, type=int, help='if use full data, 0=simple, 1=full', required=True)
-        _(K.es, type=int, help='runtime: step before early stop')
-        _(K.lr, type=float, help='train: learning rate')
-
-        _(K.reg, type=float, default=0, help='coeff of regularization')
-        _(K.drp, type=float, default=1, help='probability of dropout')
-        _(K.temp, type=float, default=0, help='temperature in kl/softmax')
-
-        _(K.woru, type=int, help='adv noise for word/user, 0=no adv')
-        _(K.topk, type=int, help='topk for mean pooling')
-        _(K.eps, type=float, help='epsilon for adv gradient')
-        _(K.atp, type=int, help='adv type')
-
-        _(K.mix, type=float, help='mixture weight of extra modules')
-        _(K.dpt, type=int, help='depth of dense')
-        _(K.act, type=int, help='activate function of dense')
-        return tu.parse_args(parser)
-
     def make_log_path(self, make_new):
-        dnames, vnames = [d.name for d in self.datas], [v.__name__ for v in self.vers]
-        tstr, dstr, vstr = tmu.format_date()[4:], '+'.join(dnames), '+'.join(vnames)
+        vnames = [v.__name__ for v in self.vers]
+        tstr, dstr, vstr = tmu.format_date()[2:], '+'.join(self.dnames), '+'.join(vnames)
         log_path = './log' + '_'.join([tstr, vstr, dstr, self.comment])
         if make_new:
             import inspect

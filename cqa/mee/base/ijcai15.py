@@ -2,7 +2,7 @@ from .common import *
 
 
 # noinspection PyAttributeOutsideInit
-class IJCAI15(CCC):
+class IJCAI15(CqaBaseline):
     def cnn_topk(self, t, maxlen, ns):
         with tf.variable_scope('CNN_tk', reuse=tf.AUTO_REUSE):
             t = tf.layers.conv1d(t, filters=10, kernel_size=3, kernel_initializer=self.x_init)

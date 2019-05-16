@@ -5,34 +5,34 @@ from utils import Nodes, iu, tu
 from clu.me import C
 
 
-def get_args():
-    parser = tu.get_common_parser()
-    _ = parser.add_argument
-    _(C.cn, type=int, help='model: cluster num')
-    _(C.sc, type=float, help='model: scale for normal init')
-    _(C.md, type=int, default=None, help='model: model inner dim')
-    _(C.bs, type=int, help='runtime: pos batch size')
-    _(C.ns, type=int, help='runtime: neg batch num')
-
-    _(C.l1, type=float, default=None, help='model: lambda for negative samples')
-    _(C.l2, type=float, default=None, help='model: lambda for cluster similarity')
-    _(C.l3, type=float, default=None, help='model: lambda for point-wise loss')
-    _(C.l4, type=float, default=None, help='model: lambda for regularization loss')
-
-    _(C.mgn, type=float, default=1., help='model: margin in hinge loss')
-    _(C.bn, type=int, default=None, help='model: if use batch normalization')
-    _(C.smt, type=float, default=None, help='model: smoothness of cross entropy')
-
-    _(C.wini, type=int, default=None, help='word embed 0:random, 1:pre-trained')
-    _(C.cini, type=int, default=None, help='cluster embed 0:random, 1:pre-trained')
-    _(C.wtrn, type=int, default=None, help='if train word embedding')
-    _(C.ctrn, type=int, default=None, help='if train cluster embedding')
-
-    _(C.ptn, type=int, default=None, help='epoch num for pre-training')
-    _(C.worc, type=int, default=None, help='0:word noise, 1: embed noise')
-    _(C.eps, type=float, default=None, help='epsilon for adv grad')
-    _(C.tpk, type=int, default=None, help='top k for word feature')
-    return tu.parse_args(parser)
+# def get_args():
+#     parser = tu.get_common_parser()
+#     _ = parser.add_argument
+#     _(C.cn, type=int, help='model: cluster num')
+#     _(C.sc, type=float, help='model: scale for normal init')
+#     _(C.md, type=int, default=None, help='model: model inner dim')
+#     _(C.bs, type=int, help='runtime: pos batch size')
+#     _(C.ns, type=int, help='runtime: neg batch num')
+#
+#     _(C.l1, type=float, default=None, help='model: lambda for negative samples')
+#     _(C.l2, type=float, default=None, help='model: lambda for cluster similarity')
+#     _(C.l3, type=float, default=None, help='model: lambda for point-wise loss')
+#     _(C.l4, type=float, default=None, help='model: lambda for regularization loss')
+#
+#     _(C.mgn, type=float, default=1., help='model: margin in hinge loss')
+#     _(C.bn, type=int, default=None, help='model: if use batch normalization')
+#     _(C.smt, type=float, default=None, help='model: smoothness of cross entropy')
+#
+#     _(C.wini, type=int, default=None, help='word embed 0:random, 1:pre-trained')
+#     _(C.cini, type=int, default=None, help='cluster embed 0:random, 1:pre-trained')
+#     _(C.wtrn, type=int, default=None, help='if train word embedding')
+#     _(C.ctrn, type=int, default=None, help='if train cluster embedding')
+#
+#     _(C.ptn, type=int, default=None, help='epoch num for pre-training')
+#     _(C.worc, type=int, default=None, help='0:word noise, 1: embed noise')
+#     _(C.eps, type=float, default=None, help='epsilon for adv grad')
+#     _(C.tpk, type=int, default=None, help='top k for word feature')
+#     return tu.parse_args(parser)
 
 
 def grid_od_list(datas, vers):
@@ -68,10 +68,6 @@ def grid_od_list(datas, vers):
         #         (l1_, [1]), (l2_, [1]), (l3_, [1]), (worc_, [0]), (eps_, [50]),
         #     ))
         #     tmp_ly *= (part1 + part2 + part3)
-        # if v == N7:
-        #     tmp_ly *= LY((  # ARL-Random
-        #         (l1_, [1]), (l2_, [1]), (l3_, [1]), (worc_, [1]), (eps_, [50]),
-        #     ))
         # if v == N6:
         #     part1 = LY((
         #         (l3_, [0]),

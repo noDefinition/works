@@ -95,14 +95,20 @@ class _Data:
         self.word_vec_file = f('word_vec_64d.pkl')
         self.qid2qauv_file = f('cdong', 'qid2qauv_dict.pkl')
         self.rvs2qids_file = f('cdong', 'rvs2qids_dict.pkl')
+        # self.wid2idf_file = f('cdong', 'wid2idf_dict.pkl')
         # self.simple_qid2qauv_file = f('simple', 'qid2qauv_dict.pkl')
         # self.simple_rvs2qids_file = f('simple', 'rvs2qids_dict.pkl')
         self.need_transfer = [
             self.user_vec_file, self.word_vec_file, self.qid2qauv_file, self.rvs2qids_file,
             # self.simple_qid2qauv_file, self.simple_rvs2qids_file
         ]
-        self.qid2qauv = self.rvs2qids = self.user_vec = self.word_vec = None
-        self.aid2votes = self.aid2pf16 = self.user_vec_bert = self.qid2auv_bert = None
+        self.qid2qauv: dict = None
+        self.rvs2qids: dict = None
+        self.aid2votes: dict = None
+        self.user_vec = self.word_vec = None
+        self.aid2pf16: dict = None
+        self.user_vec_bert = None
+        self.qid2auv_bert: dict = None
 
     def fill(self, *names):
         cdong_home = '/home/cdong/works/cqa/data/{}'.format(self.name)
@@ -210,6 +216,58 @@ class _Data:
         self.rvs2qids = iu.load_pickle(self.rvs2qids_file)
         self.qid2qauv = iu.load_pickle(self.qid2qauv_file)
 
+    @tmu.stat_time_elapse
+    def calc_wid2idf(self):
+        wid2df = np.zeros([len(self.word_vec) + 1])
+        idx = 0
+        dnum = 0
+        for qid, (ql, al, ul, vl) in self.qid2qauv.items():
+            idx += 1
+            if idx % 10000 == 0:
+                print(idx)
+            for wids in [ql] + al:
+                dnum += 1
+                for wid in set(wids):
+                    if wid > 0:
+                        wid2df[wid] += 1
+        print(wid2df)
+        print(dnum)
+        wid2idf = np.log(dnum / (wid2df + 1))
+        iu.dump_pickle(self.wid2idf_file, wid2idf)
+        # print(len(self.word_vec))
+        # print(len(wid_set), max(wid_set))
+
+    def form_tfidf_feature(self):
+        TaggedDocument
+        from scipy.sparse import csr_matrix, vstack
+        from scipy import io
+        wid2idf = iu.load_pickle(self.wid2idf_file)
+        X = list()
+        Y = list()
+        for _, (ql, al, ul, vl) in self.gen_train():
+            Xa = list()
+            for wids in al:
+                idf = np.zeros(len(wid2idf))
+                tf = np.zeros(len(wid2idf))
+                for wid in wids:
+                    idf[wid] = wid2idf[wid]
+                    tf[wid] += 1
+                tfidf = tf * idf
+                Xa.append(tfidf)
+            X.append(csr_matrix(Xa))
+            Y.extend(vl)
+        X = vstack(X)
+        print(X.shape)
+
+    def train_doc2vec(self):
+        from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+        tag = 0
+        for qid, (ql, al, _, vl) in self.qid2qauv.items():
+            model = Doc2Vec()
+
+    # def load_wid2idf(self):
+    #     self.wid2idf = iu.load_pickle(self.wid2idf_file)
+
     # @tmu.stat_time_elapse
     # def load_cdong_simple(self):
     #     self.load_word_vec()
@@ -312,6 +370,12 @@ name2d_class = dict(zip(name_list, class_list))
 if __name__ == '__main__':
     from utils.node_utils import Nodes
     from clu.data.remote_transfer import transfer_files, OUT
+
+    for dc in [DataSo, DataZh]:
+        d = dc()
+        d.load_cdong_full()
+        d.calc_wid2idf()
+    exit()
 
     dict().copy()
     files = DataSo().need_transfer + DataZh().need_transfer

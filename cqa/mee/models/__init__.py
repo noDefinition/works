@@ -14,9 +14,9 @@ from cqa.mee.models.p4 import P4
 # from .s2 import S2
 from cqa.mee.models.b1 import B1
 
-from cqa.mee.base.common import CCC
+from cqa.mee.base.common import CqaBaseline
 from cqa.mee.base.aaai15 import AAAI15
 from cqa.mee.base.aaai17 import AAAI17
 from cqa.mee.base.ijcai15 import IJCAI15
 
-name2m_class = {v.__name__: v for v in [P1, P3, AAAI15, AAAI17, IJCAI15]}
+name2m_class = {v.__name__: v for v in [P1, P3, P4, AAAI15, AAAI17, IJCAI15]}

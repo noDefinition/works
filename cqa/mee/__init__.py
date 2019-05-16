@@ -1,21 +1,27 @@
-from utils.tune.arg_keys import X
+from utils.tune.arg_keys import Args
 
 
-class K(X):
-    winit = 'wit'
-    wtrn = 'wtn'
-    tmd = 'tmd'
+class CqaArgs(Args):
+    def __init__(self):
+        super(CqaArgs, self).__init__()
 
-    otp = 'otp'
-    ptp = 'ptp'
+        self.fda = self.add_arg('fda', type=int, help='0=simple data, 1=full', required=True)
+        self.es = self.add_arg('es', type=int, help='runtime: step before early stop')
+        self.lr = self.add_arg('lr', type=float, help='train: learning rate')
 
-    temp = 'temp'
-    woru = 'woru'
-    topk = 'topk'
-    eps = 'eps'
-    atp = 'atp'
-    mtp = 'mtp'
+        self.reg = self.add_arg('reg', type=float, default=0, help='coeff of regularization')
+        self.drp = self.add_arg('drp', type=float, default=1, help='probability of dropout')
+        self.temp = self.add_arg('temp', type=float, default=0, help='temperature in kl/softmax')
 
-    mix = 'mix'
-    dpt = 'dpt'
-    act = 'act'
+        self.woru = self.add_arg('woru', type=int, help='adv noise for word/user, 0=no adv')
+        self.topk = self.add_arg('topk', type=int, help='topk for mean pooling')
+        self.eps = self.add_arg('eps', type=float, help='epsilon for adv gradient')
+        self.atp = self.add_arg('atp', type=int, help='adv type')
+        self.ttp = self.add_arg('ttp', type=int, help='text type')
+
+        self.mix = self.add_arg('mix', type=float, help='mixture weight of extra modules')
+        self.dpt = self.add_arg('dpt', type=int, help='depth of dense')
+        self.act = self.add_arg('act', type=int, help='activate function of dense')
+
+
+K = CqaArgs()

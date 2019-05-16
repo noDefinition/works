@@ -55,7 +55,7 @@ class V1(object):
         lookup = tf.nn.embedding_lookup
         self.qwid_exp = tf.expand_dims(self.qwid, axis=0, name='qwid_exp')
         self.q_mask = self.get_mask(self.qwid_exp, name='q_mask')  # (1, lq, 1)
-        self.a_mask = self.get_mask(self.awid_seq, name='a_mask')  # , (bs, la, 1)
+        self.a_mask = self.get_mask(self.awid_seq, name='a_mask')  # (bs, la, 1)
         self.q_lkup = lookup(self.word_embed, self.qwid_exp, name='q_lkup')  # (1, lq, dw)
         self.a_lkup = lookup(self.word_embed, self.awid_seq, name='a_lkup')  # (bs, la, dw)
         self.u_lkup = lookup(self.user_embed, self.uint_seq, name='u_lkup')  # (bs, dw)

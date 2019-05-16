@@ -2,7 +2,7 @@ from .common import *
 
 
 # noinspection PyAttributeOutsideInit
-class AAAI15(CCC):
+class AAAI15(CqaBaseline):
     def forward(self):
         print('***')
         with tf.variable_scope('S-matrix'):

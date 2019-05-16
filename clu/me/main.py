@@ -1,8 +1,8 @@
 from clu.data.datasets import Sampler
 from clu.me import C
 from clu.me.gen1 import *
-from utils.deep.layers import get_session, tf, np
 from utils import au, iu, lu
+from utils.deep.layers import get_session, np, tf
 
 
 class Runner:
@@ -126,6 +126,4 @@ class Runner:
 
 
 if __name__ == '__main__':
-    from clu.me.grid import get_args
-
-    Runner(get_args()).run()
+    Runner(C.parse_args()).run()

@@ -2,9 +2,9 @@ from cqa.mee.models.v1 import *
 
 
 # noinspection PyAttributeOutsideInit
-class CCC(V1):
+class CqaBaseline(V1):
     def __init__(self, args):
-        super(CCC, self).__init__(args)
+        super(CqaBaseline, self).__init__(args)
         self.pred_scores = None
 
     def dot(self, a, b, axis=-1):

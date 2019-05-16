@@ -1,19 +1,18 @@
-from typing import Union
-from tqdm import tqdm
 from sys import stdout
+from typing import Union
 
-from cqa.mee.evaluate import MeanRankScores
-from cqa.data.datasets import name2d_class, DataSo, DataZh
-from utils.deep.funcs import get_session, init_session
-from utils import iu, lu, au, Nodes
-from cqa.mee.models import name2m_class, CCC, B1
-from cqa.mee import K
 import numpy as np
+from tqdm import tqdm
+
+from cqa.data.datasets import DataSo, DataZh, name2d_class
+from cqa.mee import K
+from cqa.mee.evaluate import MeanRankScores
+from cqa.mee.models import B1, CqaBaseline, name2m_class
+from utils import Nodes, au, iu, lu, tmu
+from utils.deep.funcs import get_session, init_session
 
 
 class Runner:
-    data: Union[DataSo, DataZh]
-
     def __init__(self, args: dict):
         full_args = args.copy()
         if args.get(K.lg, None) is not None:
@@ -35,14 +34,18 @@ class Runner:
         self.model_args = args
 
         self.save_model_params = False
-        self.data = self.model = None
+        self.save_model_graph = False
+
+        self.data: Union[DataSo, DataZh] = None
+        self.model = None
         self.train_size = self.valid_size = self.test_size = None
         self.brk_cnt = 0
         self.best_valid = None
 
         self.ppp(iu.dumps(full_args))
         self.ppp(iu.dumps({'writer_path': self.writer_path, 'param_file': self.param_file}))
-        self.sess = get_session(gpu_id, gpu_frac, Nodes.is_1702())
+        self.sess = get_session(gpu_id, gpu_frac, allow_growth=False)
+        # self.sess = get_session(gpu_id, gpu_frac, Nodes.is_1702())
 
     def ppp(self, info):
         print(info)
@@ -63,7 +66,7 @@ class Runner:
         return do_summary
 
     def run(self):
-        if self.model_cls == B1:
+        if isinstance(self.model, B1):
             self.sample_data_bert()
             self.build_model_bert()
             self.iterate_data_bert()
@@ -132,7 +135,7 @@ class Runner:
     def build_model(self):
         word_vec, user_vec = self.data.word_vec, self.data.user_vec
         self.model = self.model_cls(self.model_args)
-        if isinstance(self.model, CCC):
+        if isinstance(self.model, CqaBaseline):
             qid = self.data.get_train_qids()[0]
             ql, al, _, _ = self.data.qid2qauv[qid]
             self.model.len_q = len(ql)
@@ -143,9 +146,11 @@ class Runner:
         init_session(self.sess)
 
     def iterate_data(self):
-        do_summary = self.get_writer()
+        if self.save_model_graph:
+            do_summary = self.get_writer()
         wid_range = set(range(len(self.data.word_vec) + 1))
         uid_range = set(range(len(self.data.user_vec)))
+        tmu.check_time('iter_data')
         for e in range(self.epoch_num):
             self.ppp('\nepoch:{}'.format(e))
             train_data = self.data.gen_train(shuffle=True)
@@ -156,7 +161,11 @@ class Runner:
                 self.model.train_step(ql, al, ul, vl, epoch=e)
                 update_pbar(bid, self.train_size)
                 if reach_partition(bid, self.train_size, 3) or bid == self.train_size - 1:
+                    # if bid == 10 or \
+                #         reach_partition(bid, self.train_size, 3) or bid == self.train_size - 1:
+                #     dic['elapse'] = tmu.check_time('iter_start')
                     self.ppp(self.model.get_loss(ql, al, ul, vl))
+                    self.ppp(tmu.check_time('iter_data'))
                     if self.should_early_stop(
                             eval_valid=lambda: self.evaluate_qauv(
                                 self.data.gen_valid(), self.valid_size, 'valid'),
@@ -183,14 +192,16 @@ class Runner:
     def should_early_stop(self, eval_valid, eval_test):
         valid_mrs = eval_valid()
         scores = dict()
-        for k, v in valid_mrs.to_dict().items():
-            scores['v_' + k] = v
+        scores.update({'v_' + k: v for k, v in valid_mrs.to_dict().items()})
+        # for k, v in valid_mrs.to_dict().items():
+        #     scores['v_' + k] = v
         if valid_mrs.is_better_than(self.best_valid):
             self.brk_cnt = 0
             self.best_valid = valid_mrs
             test_mrs = eval_test()
-            for k, v in test_mrs.to_dict().items():
-                scores['t_' + k] = v
+            scores.update({'t_' + k: v for k, v in test_mrs.to_dict().items()})
+            # for k, v in test_mrs.to_dict().items():
+            #     scores['t_' + k] = v
             if self.save_model_params:
                 self.model.save(self.param_file)
         else:
@@ -200,7 +211,7 @@ class Runner:
         return self.brk_cnt >= self.early_stop
 
 
-def my_pbar(desc, total, leave, ncols):
+def my_pbar(desc: str, total: int, leave: bool, ncols: int):
     return tqdm(desc=desc, total=total, leave=leave, file=stdout, ncols=ncols, mininterval=10)
 
 
@@ -218,8 +229,6 @@ def start_pbar(ncols, desc):
     def close_pbar():
         pbar.close()
 
-    from tqdm import tqdm
-    from sys import stdout
     step = 100
     i_prev = None
     pbar = tqdm(total=step, ncols=ncols, leave=False, desc=desc, file=stdout)
@@ -227,6 +236,4 @@ def start_pbar(ncols, desc):
 
 
 if __name__ == '__main__':
-    from cqa.mee.grid import GridMee
-
-    Runner(GridMee.get_args()).run()
+    Runner(K.parse_args()).run()

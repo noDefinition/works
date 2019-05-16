@@ -2,7 +2,7 @@ from .common import *
 
 
 # noinspection PyAttributeOutsideInit
-class AAAI17(CCC):
+class AAAI17(CqaBaseline):
     def mask_sum(self, t, mask, name='mask_sum'):
         with tf.variable_scope(name):
             s = tf.reduce_sum(t * mask, axis=1, keepdims=False)
