@@ -1,15 +1,14 @@
 import multiprocessing as mp
 from subprocess import DEVNULL as V, Popen
-from typing import List, Tuple
-import types
-
-from utils import au, iu, tmu
+from typing import List, Tuple, Dict, Callable, Generator
+from utils import au
 from utils.tune.arg_keys import X
+# import types
 
 
 class LY:
     def __init__(self, *pairs_list):
-        if len(pairs_list) == 1 and isinstance(pairs_list[0], types.GeneratorType):
+        if len(pairs_list) == 1 and isinstance(pairs_list[0], Generator):
             target = pairs_list[0]
         else:
             target = pairs_list
@@ -29,7 +28,7 @@ class LY:
         return au.merge(au.grid_params(pairs) for pairs in self.pairs_list)
 
 
-def auto_gpu(func, args_list, device2max, callback=None):
+def auto_gpu(func: Callable, args_list: List[Tuple], device2max: Dict, callback=None):
     def on_process_end(d, p, q):
         p.terminate()
         device2remain[d] += 1
@@ -55,11 +54,11 @@ def auto_gpu(func, args_list, device2max, callback=None):
 
     def allocate_run(a):
         d = allocate_device()
-        a = [d] + list(a)
+        k = dict(device_id=d)
         q = mp.Queue()
-        p = mp.Process(target=_sub, args=(func, a, q), daemon=True)
-        p.start()
+        p = mp.Process(target=subp, args=(func, a, k, q), daemon=True)
         pool.append((d, p, q))
+        p.start()
 
     import time
     from tqdm import tqdm
@@ -79,17 +78,8 @@ def auto_gpu(func, args_list, device2max, callback=None):
     pbar.close()
 
 
-def _sub(f, a, q):
-    q.put(f(*a))
-
-
-def run_on_gpu(device_id, od, device2max, max2frac, cmd_pre):
-    od.update({X.gi: device_id, X.gp: max2frac[device2max[device_id]]})
-    entries = [(k if k.startswith('-') else '-' + k, v) for k, v in od.items()]
-    command = cmd_pre + au.entries2name(entries, inter=' ', inner=' ')
-    v = None if (sum(device2max.values()) == 1) else V
-    Popen(command, cwd='./', shell=True, stdin=v, stdout=v, stderr=None).communicate()
-    return device_id, od[X.gid]
+def subp(f, a, k, q):
+    q.put(f(*a, **k))
 
 
 def run_on_end(args):
@@ -97,29 +87,38 @@ def run_on_end(args):
     print('tu: run_on_end, gid', gid)
 
 
-def run_od_list(cmd_pre, od_list, dev_ids, dev_max, func=run_on_gpu, callback=run_on_end):
+def run_on_gpu(cmd_pre, od, max2frac, device_max, device_id):
+    od.update({X.gi: device_id, X.gp: max2frac[device_max[device_id]]})
+    entries = [(k if k.startswith('-') else '-' + k, v) for k, v in od.items()]
+    cmd_full = cmd_pre + au.entries2name(entries, inter=' ', inner=' ')
+    v = None if (sum(device_max.values()) == 1) else V
+    Popen(cmd_full, cwd='./', shell=True, stdin=v, stdout=v, stderr=None).communicate()
+    return device_id, od[X.gid]
+
+
+def run_od_list(cmd_pre, od_list, dev_ids, dev_max, subfunc=run_on_gpu, callback=run_on_end):
+    dev2max = get_dev2max(dev_ids, dev_max)
+    max2frac = get_max2frac()
+    args_list = [(cmd_pre, od, max2frac, dev2max) for od in od_list]
+    auto_gpu(subfunc, args_list, dev2max, callback)
+
+
+def get_dev2max(dev_ids, dev_max):
     if isinstance(dev_max, int):
-        device2max = {dev_id: dev_max for dev_id in dev_ids}
+        dev2max = {dev_id: dev_max for dev_id in dev_ids}
     elif isinstance(dev_max, list):
         assert len(dev_max) == len(dev_ids)
-        device2max = dict(zip(dev_ids, dev_max))
+        dev2max = dict(zip(dev_ids, dev_max))
     else:
         raise ValueError('dev_max invalid: {}'.format(dev_max))
-    max2frac = {i: round(1 / (1.15 * i), 2) for i in range(1, 5)}
+    return dev2max
+
+
+def get_max2frac():
+    max2frac = {1: 0.87, 2: 0.43, 3: 0.29, 4: 0.22}
     max2frac[1] = 0.5
     max2frac[2] = 0.3
-    args_list = [(od, device2max, max2frac, cmd_pre) for od in od_list]
-    auto_gpu(func, args_list, device2max, callback)
-
-
-def get_log_path(str_list, make_new: bool):
-    if make_new:
-        log_path = './log_{}_{}'.format(tmu.format_date()[2:], '+'.join(str_list))
-        iu.mkdir(log_path, rm_prev=True)
-    else:
-        log_path = iu.choose_from(iu.list_children('./', iu.DIR, 'log', full_path=True))
-    print('log path:', log_path)
-    return log_path
+    return max2frac
 
 
 def update_od_list(od_list, log_path, shuffle):

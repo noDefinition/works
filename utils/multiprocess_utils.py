@@ -15,8 +15,8 @@ def multi_process(func, args_list=None, kwargs_list=None, while_wait=None):
     pool = mp.Pool(processes=process_num)
     for i in range(process_num):
         args = args_list[i] if args_list else ()
-        kwds = kwargs_list[i] if kwargs_list else {}
-        res_list.append(pool.apply_async(func=func, args=args, kwds=kwds))
+        kwargs = kwargs_list[i] if kwargs_list else {}
+        res_list.append(pool.apply_async(func=func, args=args, kwds=kwargs))
     pool.close()
     if while_wait is not None:
         while_wait()

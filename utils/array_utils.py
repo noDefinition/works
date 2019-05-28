@@ -108,8 +108,8 @@ def grid_params(name_value_list):
         od = Od(zip(names, [None] * len(names)))
         for n_idx, v_idx in enumerate(idx_vec):
             n, v = names[n_idx], values_list[n_idx][v_idx]
-            if not callable(v):
-                od[n] = v
+            # if not callable(v):
+            od[n] = v
         return od
 
     names, values_list = list(zip(*name_value_list))

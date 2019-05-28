@@ -20,23 +20,24 @@ class N1:
         self.n_init = tf.random_normal_initializer(mean=0., stddev=args[C.sc])
 
     @staticmethod
-    def _get_variable(name, init, train):
-        shape = init.shape
+    def get_variable(name, init, train):
         initer = tf.constant_initializer(init)
-        var = tf.get_variable(name=name, shape=shape, initializer=initer, trainable=train)
-        return shape, var
+        var = tf.get_variable(name=name, shape=init.shape, initializer=initer, trainable=train)
+        return var
 
-    def define_word_embed(self, init):
-        self.w_num, self.w_dim = init.shape
+    def define_word_embed(self, word_embed):
         # trainable = [False, True][self.w_train]
         trainable = True
-        self.w_embed = tf.Variable(init, name='w_embed', trainable=trainable, dtype=f32)
+        self.w_num, self.w_dim = word_embed.shape
+        pad = tf.zeros(shape=(1, tf.shape(word_embed)[1]), name='w_padding', dtype=f32)
+        emb = self.get_variable('w_embed', word_embed, trainable)
+        self.w_embed = tf.concat([pad, emb], axis=0, name='w_embed_concat')
 
-    def define_cluster_embed(self, init):
-        self.c_num, self.c_dim = init.shape
+    def define_cluster_embed(self, clu_embed):
         # trainable = [False, True][self.c_train]
         trainable = True
-        self.c_embed = tf.Variable(init, name='c_embed', trainable=trainable, dtype=f32)
+        self.c_num, self.c_dim = clu_embed.shape
+        self.c_embed = self.get_variable('c_embed', clu_embed, trainable)
 
     def define_inputs(self):
         self.is_train = tf.placeholder_with_default(True, (), name='is_train')
@@ -250,7 +251,7 @@ class N1:
 
     def predict(self, batch):
         fd = self.get_fd_by_batch(batch)
-        # fd[self.is_train] = False
+        fd[self.is_train] = False
         return np.argmax(self.sess.run(self.pc_probs, feed_dict=fd), axis=1).reshape(-1)
 
     def evaluate(self, batches):
@@ -259,3 +260,9 @@ class N1:
             clusters.extend(self.predict(batch))
             topics.extend(d.topic for d in batch)
         return au.scores(topics, clusters, au.eval_scores)
+
+    def save(self, file):
+        tf.train.Saver().save(self.sess, file)
+
+    def load(self, file):
+        tf.train.Saver().restore(self.sess, file)

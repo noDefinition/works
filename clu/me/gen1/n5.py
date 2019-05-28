@@ -11,13 +11,15 @@ class N5(N1):
         self.worc = args[C.worc]
         self.eps = args[C.eps]
 
-    def define_cluster_embed(self, init):
-        super(N5, self).define_cluster_embed(init)
-        self.c_noise = tf.get_variable(name='c_noise', shape=init.shape, initializer=self.x_init)
+    def define_cluster_embed(self, clu_embed):
+        super(N5, self).define_cluster_embed(clu_embed)
+        shape = self.c_embed.shape
+        self.c_noise = tf.get_variable(name='c_noise', shape=shape, initializer=self.x_init)
 
-    def define_word_embed(self, init):
-        super(N5, self).define_word_embed(init)
-        self.w_noise = tf.get_variable(name='w_noise', shape=init.shape, initializer=self.x_init)
+    def define_word_embed(self, word_embed):
+        super(N5, self).define_word_embed(word_embed)
+        shape = self.w_embed.shape
+        self.w_noise = tf.get_variable(name='w_noise', shape=shape, initializer=self.x_init)
 
     def define_inputs(self):
         super(N5, self).define_inputs()

@@ -5,13 +5,13 @@ from .n6 import *
 class N7(N6):
     file = __file__
 
-    def define_cluster_embed(self, init):
-        super(N7, self).define_cluster_embed(init)
-        self.c_noise = tf.nn.l2_normalize(tf.random_uniform(init.shape, minval=-1., maxval=1.))
+    def define_cluster_embed(self, clu_embed):
+        super(N7, self).define_cluster_embed(clu_embed)
+        self.c_noise = tf.nn.l2_normalize(tf.random_uniform(clu_embed.shape, minval=-1., maxval=1.))
 
-    def define_word_embed(self, init):
-        super(N7, self).define_word_embed(init)
-        self.w_noise = tf.nn.l2_normalize(tf.random_uniform(init.shape, minval=-1., maxval=1.))
+    def define_word_embed(self, word_embed):
+        super(N7, self).define_word_embed(word_embed)
+        self.w_noise = tf.nn.l2_normalize(tf.random_uniform(word_embed.shape, minval=-1., maxval=1.))
 
     def define_optimizer(self):
         self.optimizer = tf.train.AdamOptimizer(tf.train.exponential_decay(

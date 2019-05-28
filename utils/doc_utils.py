@@ -5,6 +5,7 @@ import numpy as np
 import utils.io_utils as iu
 import utils.pattern_utils as pu
 from utils.id_freq_dict import IdFreqDict
+from typing import List
 
 
 # noinspection PyAttributeOutsideInit
@@ -13,7 +14,10 @@ class Document:
         self.clear()
 
     def clear(self):
-        self.docid = self.topic = self.text = self.tokens = self.tokenids = None
+        self.docid = self.topic = None
+        self.text: str = None
+        self.tokens: List[str] = None
+        self.tokenids: List[int] = None
         self.pos_fill = self.neg_fill = self.tf = self.tfidf = None
 
     def set(self, docid, topic, text):
@@ -36,16 +40,16 @@ def dump_docarr(file, docarr):
     iu.dump_array(file, [d.to_dict() for d in docarr])
 
 
-def load_docarr(file):
+def load_docarr(file) -> List[Document]:
     return [Document().from_dict(d) for d in iu.load_array(file)]
 
 
-def make_docarr(args_list):
+def make_docarr(args_list) -> List[Document]:
     return [Document().set(*arg) for arg in args_list]
 
 
-def docarr_fit_tf(ifd, docarr):
-    v_size = ifd.vocabulary_size()
+def docarr_fit_tf(word2vec: dict, docarr):
+    v_size = len(word2vec)
     for d in docarr:
         if d.tf is None:
             v = np.zeros(v_size, dtype=np.int32)
@@ -56,13 +60,12 @@ def docarr_fit_tf(ifd, docarr):
     return docarr
 
 
-def docarr_fit_tfidf(ifd, docarr):
+def docarr_fit_tfidf(word2vec: dict, docarr):
     from sklearn import preprocessing
     from sklearn.feature_extraction.text import TfidfTransformer
 
-    # matrix = TfidfTransformer().fit_transform(matrix).toarray()
     transformer = TfidfTransformer(norm='l2', sublinear_tf=True)
-    tf = [d.tf for d in docarr_fit_tf(ifd, docarr)]
+    tf = [d.tf for d in docarr_fit_tf(word2vec, docarr)]
     tfidf = transformer.fit_transform(tf)
     tfidf = tfidf.todense() * np.sqrt(tfidf.shape[1])
     tfidf = preprocessing.normalize(tfidf, norm='l2') * 200

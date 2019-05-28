@@ -1,6 +1,6 @@
 from clu.data.datasets import Sampler
 from clu.me import C
-from clu.me.gen1 import *
+from clu.me.gen1 import name2m_class, N1
 from utils import au, iu, lu
 from utils.deep.layers import get_session, np, tf
 
@@ -9,44 +9,36 @@ class Runner:
     def __init__(self, args: dict):
         self.args = args
         self.gid = args[C.gid]
-        self.gpu_id = args[C.gi]
-        self.gpu_frac = args[C.gp]
         self.epoch_num = args[C.ep]
-        self.batch_size = args[C.bs]
-        self.neg_size = args[C.ns]
-        self.data_name = args[C.dn]
-        self.model_name = args[C.vs]
+        self.gpu_id, self.gpu_frac = args[C.gi], args[C.gp]
+        self.batch_size, self.neg_size = args[C.bs], args[C.ns]
+        self.data_name, self.model_name = args[C.dn], args[C.vs]
 
-        self.w_init = args[C.wini]
-        self.c_init = args[C.cini]
+        self.w_init, self.c_init = args[C.wini], args[C.cini]
         self.scale = args[C.sc]
         self.c_num = args[C.cn]
 
         self.log_path = args[C.lg]
         entries = [(k, v) for k, v in args.items() if v is not None]
         log_name = au.entries2name(entries, exclude={C.gi, C.gp, C.lg}, postfix='.txt')
-        self.log_file = iu.join(self.log_path, log_name)
-        self.logger = lu.get_logger(self.log_file)
+        self.logger = lu.get_logger(iu.join(self.log_path, log_name))
 
-        # self.is_record = Nodes.is_1702()
-        self.is_record = False
-        if self.is_record:
+        self.use_record = False
+        self.save_model_params = False
+        if self.use_record:
             self.writer_path = iu.join(self.log_path, 'gid={}'.format(self.gid))
             self.param_file = iu.join(self.writer_path, 'model.ckpt')
-            self.hyper_file = iu.join(self.writer_path, 'hyper')
-            iu.mkdir(self.writer_path)
-            iu.dump_json(self.hyper_file, args)
+            iu.mkdir(self.writer_path, rm_prev=True)
 
+        self.model = None
+        self.model_class = name2m_class[self.model_name]
         self.history = list()
         self.writer_step = 0
-        self.ppp(args)
+        self.ppp(iu.dumps(args))
 
     def ppp(self, info):
         print(info)
         self.logger.info(info)
-
-    def get_model_class(self):
-        return {v.__name__: v for v in [N6]}[self.model_name]
 
     def get_writer(self, sess):
         def summary_details(fd):
@@ -68,27 +60,23 @@ class Runner:
         np.random.seed(5413 + self.gid)
         tf.set_random_seed(17256 + self.gid)
         sampler = Sampler(self.data_name)
-        w_embed, c_embed = sampler.d_obj.load_word_cluster_embed()
-        # if self.c_num != sampler.d_obj.topic_num:
-        #     from baselinee.kmeans import fit_kmeans
-        #     avg_embeds, _ = sampler.d_obj.get_avg_embeds_and_topics()
-        #     c_embed = fit_kmeans(avg_embeds, self.c_num).cluster_centers_
-        #     self.ppp('c_embed.shape: {}'.format(c_embed.shape))
+        sampler.load()
+        w_embed, c_embed = sampler.word_embed_init, sampler.clu_embed_init
         # if self.e_init == 0:
         #     self.ppp('random w & c embed')
         #     w_embed = np.random.normal(0., self.scale, size=w_embed.shape)
         #     c_embed = np.random.normal(0., self.scale, size=c_embed.shape)
-        model = self.get_model_class()(self.args)
+        model = self.model = self.model_class(self.args)
+        assert isinstance(model, N1)
         model.build(w_embed, c_embed)
-        sess = get_session(self.gpu_id, self.gpu_frac, allow_growth=True, run_init=True)
-        model.set_session(sess)
+        model.set_session(get_session(self.gpu_id, self.gpu_frac, allow_growth=True))
         # summary_details, summary_scores = self.get_writer(sess)
         for e in range(self.epoch_num):
             print('\nepoch:{}'.format(e))
             """ train & predict """
             train_batches = list(sampler.shuffle_generate(self.batch_size, self.neg_size))
             data_size = len(train_batches)
-            for bid, pos, negs in train_batches:
+            for bid, (pos, negs) in enumerate(train_batches):
                 fd = model.get_fd_by_batch(pos, negs)
                 model.train_step(fd, e, self.epoch_num, bid, data_size)
                 if bid % (data_size // 8) == 0:
@@ -96,18 +84,19 @@ class Runner:
                     # summary_details(fd)
             """ evaluate """
             s2v = model.evaluate(sampler.eval_batches)
-            self.ppp(iu.dumps(s2v))
             # summary_scores(s2v)
-            score = s2v['acc']
-            self.history.append(score)
             # if self.is_record and (len(self.history) <= 1 or score > max(self.history[:-1])):
-            #     tf.train.Saver(tf.trainable_variables()).save(sess, self.param_file)
-            if self.should_early_stop(score):
+            if self.should_early_stop(s2v):
                 # model.manual_assign_adv(train_batches, sampler.eval_batches, self.ppp)
                 return
 
-    def should_early_stop(self, score):
+    def should_early_stop(self, name2score: dict):
+        self.ppp(iu.dumps(name2score))
+        score = sum(name2score.values())
         h = self.history
+        if len(h) >= 1 and score > max(h) and self.save_model_params:
+            self.model.save(self.param_file)
+        h.append(score)
         early = 'early stop[epoch {}]:'.format(len(h))
         if (len(h) >= 5 and score <= 0.1) or (len(h) >= 50 and score <= 0.3):
             self.ppp(early + 'score too small-t.s')
