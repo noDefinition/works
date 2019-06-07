@@ -7,7 +7,7 @@ class N2(N1):
     file = __file__
 
     def define_denses(self):
-        ed, md = self.w_dim, self.m_dim
+        ed, md = self.dim_w, self.dim_m
         initer = self.n_init
 
         self.W_1 = Dense(ed, ed, kernel=initer, name='W_1')
@@ -20,7 +20,7 @@ class N2(N1):
         # self.D_r = Dense(ed, ed, activation=relu, kernel_initializer=initer, name='D_r')
         # self.D_r = Denses(ed, [(ed, relu), (ed, None)], initer, name='D_r')
 
-    def get_c_probs_r(self, e, c, name):
+    def get_probs_and_recon(self, e, c, name):
         with tf.name_scope(name):
             # batch_size * clu_num
             c_score = tf.matmul(e, tf.transpose(c))
@@ -36,8 +36,8 @@ class N2(N1):
         c, Pd, Nd = self.get_cpn()
 
         with tf.name_scope('similarity'):
-            pc_probs, Pr = self.get_c_probs_r(Pd, c, 'reconstruct_p')
-            nc_probs, Nr = self.get_c_probs_r(Nd, c, 'reconstruct_n')
+            pc_probs, Pr = self.get_probs_and_recon(Pd, c, 'reconstruct_p')
+            nc_probs, Nr = self.get_probs_and_recon(Nd, c, 'reconstruct_n')
             with tf.name_scope('loss'):
                 Pd_l2, Pr_l2, Nd_l2, Nr_l2 = l2_norm_tensors(Pd, Pr, Nd, Nr)
                 PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)

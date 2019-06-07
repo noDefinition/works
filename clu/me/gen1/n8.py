@@ -11,8 +11,8 @@ class N8(N6):
         c, Pd, Nd = self.get_cpn()
 
         with tf.name_scope('similarity'):
-            pc_probs, Pr = self.get_c_probs_r(Pd, c, 'reconstruct_p')
-            _, Nr = self.get_c_probs_r(Nd, c, 'reconstruct_n')
+            pc_probs, Pr = self.get_probs_and_recon(Pd, c, 'reconstruct_p')
+            _, Nr = self.get_probs_and_recon(Nd, c, 'reconstruct_n')
             with tf.name_scope('loss'):
                 Pd_l2, Pr_l2, Nd_l2, Nr_l2 = l2_norm_tensors(Pd, Pr, Nd, Nr)
                 PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)

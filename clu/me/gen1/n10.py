@@ -8,16 +8,16 @@ class N10(N5):
 
     def define_inputs(self):
         super(N10, self).define_inputs()
-        ed, md = self.w_dim, self.m_dim
+        ed, md = self.dim_w, self.dim_m
         ph, lk = tf.placeholder, tf.nn.embedding_lookup
         shape = (None,)
         self.p_did = ph(i32, shape=shape)
-        self.n_dids = [ph(i32, shape=shape) for _ in range(self.n_num)]
+        self.n_dids = [ph(i32, shape=shape) for _ in range(self.neg_n)]
         self.d_embed = tf.get_variable('d_embed', shape=[30000, ed])
 
     def define_denses(self):
         super(N10, self).define_denses()
-        ed, md, init = self.w_dim, self.m_dim, self.x_init
+        ed, md, init = self.dim_w, self.dim_m, self.x_init
         # self.
         self.FFN = Denses(ed, [(ed, relu), (ed, None)], kernel=self.x_init)
 

@@ -7,7 +7,7 @@ class G3(G1):
     file = __file__
     
     def define_denses(self):
-        super(G3, self).define_denses()
+        super(G3, self).define_weight_params()
         sc, ed, md = self.scale, self.e_dim, self.m_dim
         relu = tf.nn.relu
         

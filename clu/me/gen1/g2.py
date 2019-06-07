@@ -6,7 +6,7 @@ class G2(G1):
     """ 判别器分别输入正例与重构（要求对二者使用同样的结构），输出概率值并比较 """
 
     def define_denses(self):
-        super(G2, self).define_denses()
+        super(G2, self).define_weight_params()
         sc, ed, md = self.scale, self.e_dim, self.m_dim
         self.DL_dis = MyDenses(ed, [md, int(md / 2), 1], sc, (relu, relu, sigmoid))
         self.D_dis = [self.DL_dis]

@@ -3,13 +3,10 @@ from utils.deep.layers import *
 
 
 # noinspection PyAttributeOutsideInit,PyPep8Naming
-class N1:
-    """  """
-    file = __file__
-
+class N1(object):
     def __init__(self, args: dict):
-        self.m_dim = args[C.md]
-        self.n_num = args[C.ns]
+        self.dim_m = args[C.md]
+        self.neg_n = args[C.ns]
         self.use_bn = args[C.bn]
         self.smooth = args[C.smt]
         self.margin = args[C.mgn]
@@ -28,7 +25,7 @@ class N1:
     def define_word_embed(self, word_embed):
         # trainable = [False, True][self.w_train]
         trainable = True
-        self.w_num, self.w_dim = word_embed.shape
+        self.w_num, self.dim_w = word_embed.shape
         pad = tf.zeros(shape=(1, tf.shape(word_embed)[1]), name='w_padding', dtype=f32)
         emb = self.get_variable('w_embed', word_embed, trainable)
         self.w_embed = tf.concat([pad, emb], axis=0, name='w_embed_concat')
@@ -36,7 +33,7 @@ class N1:
     def define_cluster_embed(self, clu_embed):
         # trainable = [False, True][self.c_train]
         trainable = True
-        self.c_num, self.c_dim = clu_embed.shape
+        self.c_num, self.dim_c = clu_embed.shape
         self.c_embed = self.get_variable('c_embed', clu_embed, trainable)
 
     def define_inputs(self):
@@ -45,16 +42,16 @@ class N1:
         shape = (None, None)
         ph, lk = tf.placeholder, tf.nn.embedding_lookup
         self.p_seq = ph(i32, shape, name='p_seq')
-        self.n_seqs = [ph(i32, shape, name='n_seq_{}'.format(i)) for i in range(self.n_num)]
+        self.n_seqs = [ph(i32, shape, name='n_seq_{}'.format(i)) for i in range(self.neg_n)]
         with tf.name_scope('lookup_pos'):
-            self.p_rep = lk(self.w_embed, self.p_seq, name='p_rep')
+            self.p_lkup = lk(self.w_embed, self.p_seq, name='p_rep')
         with tf.name_scope('lookup_neg'):
-            self.n_reps = [lk(self.w_embed, n, name='n_rep_{}'.format(i))
-                           for i, n in enumerate(self.n_seqs)]
+            self.n_lkups = [lk(self.w_embed, n, name='n_rep_%d' % i)
+                            for i, n in enumerate(self.n_seqs)]
 
     def define_denses(self):
-        assert self.w_dim == self.c_dim
-        ed, md = self.w_dim, self.m_dim
+        assert self.dim_w == self.dim_c
+        ed, md = self.dim_w, self.dim_m
         initer = self.n_init
 
         self.W_1 = Dense(ed, ed, kernel=initer, name='W_1')
@@ -82,15 +79,13 @@ class N1:
         md_att = tf.reduce_sum(wq_apply, axis=1, keepdims=False)
         return md_att
 
-    def get_c_probs_r(self, e, c, name):
+    def get_probs_and_recon(self, e, c, name):
         with tf.name_scope(name):
-            # batch_size * clu_num
-            c_score = tf.matmul(e, tf.transpose(c))
-            c_probs = tf.nn.softmax(c_score, axis=1)
-            # batch_size * embed_dim
-            r = tf.matmul(c_probs, c)
-            # r = self.D_r(r, name='transform_r')
-        return c_probs, r
+            c_score = tf.matmul(e, tf.transpose(c))  # (bs * cn)
+            c_probs = tf.nn.softmax(c_score, axis=1)  # (bs * cn)
+            c_recon = tf.matmul(c_probs, c)  # (bs * ed)
+            # c_recon = self.D_r(c_recon, name='transform_r')
+        return c_probs, c_recon
 
     def get_cpn(self):
         with tf.name_scope('c_embed'):
@@ -98,10 +93,10 @@ class N1:
             c = self.c_embed
         with tf.name_scope('p_mdatt'):
             # (batch_size, embed_dim)
-            p = self.multi_dim_att(self.p_rep)
+            p = self.multi_dim_att(self.p_lkup)
         with tf.name_scope('n_mdatt'):
             # (neg size, embed_dim)
-            n = tf.concat([self.multi_dim_att(x) for x in self.n_reps], axis=0)
+            n = tf.concat([self.multi_dim_att(x) for x in self.n_lkups], axis=0)
         return c, p, n
 
     def forward(self):
@@ -109,8 +104,8 @@ class N1:
         c, Pd, Nd = self.get_cpn()
 
         with tf.name_scope('similarity'):
-            pc_probs, Pr = self.get_c_probs_r(Pd, c, 'reconstruct_p')
-            _, Nr = self.get_c_probs_r(Nd, c, 'reconstruct_n')
+            pc_probs, Pr = self.get_probs_and_recon(Pd, c, 'reconstruct_p')
+            _, Nr = self.get_probs_and_recon(Nd, c, 'reconstruct_n')
             with tf.name_scope('loss'):
                 Pd_l2, Pr_l2, Nd_l2, Nr_l2 = l2_norm_tensors(Pd, Pr, Nd, Nr)
                 PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)

@@ -17,6 +17,7 @@ class CqaArgs(Args):
         self.topk = self.add_arg('topk', type=int, help='topk for mean pooling')
         self.eps = self.add_arg('eps', type=float, help='epsilon for adv gradient')
         self.atp = self.add_arg('atp', type=int, help='adv type')
+        self.qtp = self.add_arg('qtp', type=int, help='question type')
         self.ttp = self.add_arg('ttp', type=int, help='text type')
 
         self.mix = self.add_arg('mix', type=float, help='mixture weight of extra modules')

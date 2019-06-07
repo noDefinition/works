@@ -8,14 +8,13 @@ from cqa.mee import K
 class GridMee:
     def __init__(self):
         self.datas, self.vers, self.gpu_ids, self.gpu_max = Nodes.select(
-            n1702=([DataSo, DataZh], [P3], [0, 1], 1),
-            # ngpu=([DataSo, DataZh], [P4], [0, 1, 3], [2, 2, 2]),
-            ngpu=([DataSo, DataZh], [P4], [0, 1, 2], 1),
+            n1702=([DataSo], [P3], [0, 1], 1),
+            ngpu=([DataZh], [P3], [0, 1, ], 2),
+            # n1702=([DataSo], [P2], [0, ], 1),
         )
         # self.use_fda = 0 if len(self.gpu_ids) * self.gpu_max <= 1 else 1
         self.dnames = [d.name for d in self.datas]
         self.use_fda = 1
-        # self.comment = 'tune_topk'
         while True:
             self.comment = input('comment:')
             if re.findall('\W', self.comment):
@@ -28,11 +27,13 @@ class GridMee:
         common_ly = LY((
             (K.ep, [20]), (K.es, [6]), (K.lr, [1e-4]),
             (K.dn, self.dnames), (K.fda, [self.use_fda]),
-            (K.lid, list(range(3))),
+            (K.lid, list(range(2))),
         ))
         vers_ly = LY()
         for v in self.vers:
-            tmp_ly = LY(((K.vs, [v.__name__]),))
+            tmp_ly = LY((
+                (K.vs, [v.__name__]),
+            ))
             # if v == V1 or v == V5 or v == P1 or v == P2:
             #     tmp_ly *= LY((
             #         (K.reg, [0, 1, 1e-2]),
@@ -63,19 +64,29 @@ class GridMee:
             #         (K.act, [0]),
             #         # (K.act, [0, 1, 2]),
             #     ))
+            if v == P2:
+                tmp_ly *= LY((
+                    (K.qtp, [1]),
+                    (K.topk, [20]),
+                    # (K.topk, [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),
+                ))
             if v == P3:
                 tmp_ly *= LY((
-                    (K.woru, [0]), (K.topk, [int(1e9)]),
+                    # (K.woru, [0]), (K.topk, [int(1e9)]),
                     # )) + LY((
                     # (K.woru, [1, 2]),
-                    # (K.topk, [5, 10, 15, 20, 30, 40, 50]),
+                    # (K.topk, [5, 10, 15, 20, 25, 30, 35, 40, 45, 50]),
+                    (K.woru, [0, 1, 2]),
+                    (K.topk, [40]),
+                    (K.drp, [i / 10 for i in range(1, 10, 2)])
+                    # (K.drp, [0, 0.1, 0.2, 0.3, 0.6])
                 ))
             if v == P4:
                 tmp_ly *= LY((
                     #     (K.ttp, [0]), (K.atp, [0]), (K.topk, [5]),
-                    # )) + LY((
+                    # ), (
                     #     (K.ttp, [0]), (K.atp, [1]),
-                    # )) + LY((
+                    # ), (
                     (K.ttp, [1]), (K.atp, [0, 1]), (K.drp, [0.3, 0]),
                 ))
             vers_ly += tmp_ly

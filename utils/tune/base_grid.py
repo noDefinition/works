@@ -16,7 +16,7 @@ class BaseGrid(object):
     @staticmethod
     def get_comment(default: str = None):
         import re
-        if default is not None:
+        if default:
             return default
         while True:
             comment = input('comment:')

@@ -32,11 +32,15 @@ class AnalyzeMee:
         print('log path:', log_path)
         log_files = iu.list_children(log_path, pattern=r'^gid.+\.txt$', full_path=True)
         best_list = list()
+        pre = 't_'
+        pre = ''
+        print('pre', pre)
         for file in log_files:
             entries = au.name2entries(name=iu.get_name(file), postfix='.txt', exclude=self.exclude)
             scores = [iu.loads(l) for l in iu.read_lines(file) if
-                      (l.startswith('{') and 'v_NDCG' in l)]
-            scores_with_test = [s for s in scores if 't_NDCG' in s]
+                      (l.startswith('{') and 'NDCG' in l)]
+            scores_with_test = [s for s in scores if '%sNDCG' % pre in s]
+            # scores_with_test = [s for s in scores if 'NDCG' in s]
             if len(scores) == 0 or len(scores_with_test) == 0:
                 print(au.entries2name(entries), 'lacks test info')
                 continue
@@ -59,10 +63,10 @@ class AnalyzeMee:
                 table.loc[i, k] = v
         table.fillna('-', inplace=True)
         temp = 'mmm'
-        pre = 't'
-        table[temp] = table['%s_NDCG' % pre] + table['%s_MAP' % pre] + table['%s_MRR' % pre]
+        # pre = 't_'
+        table[temp] = table['%sNDCG' % pre] + table['%sMAP' % pre] + table['%sMRR' % pre]
         table = table.sort_values(by=temp)
-        table.drop([temp, K.lr, K.reg, K.gid, K.ep], axis=1, inplace=True)
+        # table.drop([temp, K.lr, K.reg, K.gid, K.ep], axis=1, inplace=True)
         if self.args.s:
             table.to_csv(iu.join(log_path, 'summary.csv'))
 
@@ -125,15 +129,18 @@ class AnalyzeMee:
     def full_score_ver(self):
         s_names = MeanRankScores.s_names
         k_values = MeanRankScores.k_values
-        wanted_scores = ['t_{}@{}'.format(s, k) for s in s_names for k in k_values[1:3]]
 
         log_path = self.get_log_path()
         print('log path:', log_path)
         best_list = list()
+        pre = 't_'
+        # log_path = '/home/cdong/works/cqa/mee/base/d2v'
+        # pre = ''
+        wanted_scores = ['{}{}@{}'.format(pre, s, k) for s in s_names for k in k_values[1:3]]
         for file in iu.list_children(log_path, pattern=r'^gid.+\.txt$', full_path=True):
             entries = au.name2entries(name=iu.get_name(file), postfix='.txt', exclude=self.exclude)
-            test_scores = [iu.loads(l) for l in iu.read_lines(file) if
-                           l.startswith('{') and 't_NDCG' in l]
+            test_scores = [iu.loads(l.replace('\'', '"')) for l in iu.read_lines(file) if
+                           l.startswith('{') and '{}NDCG'.format(pre) in l]
             # test_scores = [d for d in scores if 't_NDCG' in d]
             if len(test_scores) == 0:
                 print(au.entries2name(entries), 'lacks test info')
@@ -143,8 +150,6 @@ class AnalyzeMee:
             for idx, rvs2scores in enumerate(best_tests):
                 for title, value in rvs2scores.items():
                     score_table.loc[idx, title] = value
-            # score_table.pop('brk_cnt')
-            # score_table['ep'] = len(scores)
             score_table = score_table.mean(axis=0).round(4)
             score_table = score_table[wanted_scores]
             best_list.append((dict(entries), score_table.to_dict()))
@@ -160,23 +165,26 @@ class AnalyzeMee:
         table[temp] = 0
         for s in s_names:
             for k in k_values[1:3]:
-                table[temp] += table['t_{}@{}'.format(s, k)]
+                table[temp] += table['{}{}@{}'.format(pre, s, k)]
         table.sort_values(by=temp, inplace=True)
 
         log_name = iu.get_name(log_path)
         drop_col = {temp, K.lr, K.reg, K.gid, K.ep, K.fda, K.temp}
+        group_col = [K.dn, K.vs]
         if 'lstm_wwoatt' in log_name:
-            group_col = [K.dn, K.vs, K.atp, K.topk]
-        elif 'AAAI' in log_name:
-            group_col = [K.dn, K.vs]
-        elif 'tune_topk' in log_name:
-            group_col = [K.dn, K.vs, K.woru, K.topk]
+            group_col += [K.atp, K.topk]
+        elif 'tune_topk' in log_name or 'other_topk' in log_name:
+            group_col += [K.woru, K.topk]
             drop_col.add(K.drp)
         elif 'only_user' in log_name:
-            group_col = [K.dn, K.vs, K.woru]
-            drop_col.add(K.topk)
-            drop_col.add(K.drp)
+            group_col += [K.woru]
+            drop_col.update({K.topk, K.drp})
+        elif 'qtypes' in log_name or 're_so' in log_name or 'qau_cat' in log_name:
+            group_col += [K.qtp]
+        elif 'margin_drop' in log_name:
+            group_col += [K.woru, K.drp, K.topk]
         else:
+            # group_col = [K.gid]
             raise ValueError('cdong: dont know how to organize hyperparams:', log_name)
         table.drop(list(drop_col), axis=1, inplace=True, errors='ignore')
 

@@ -86,7 +86,7 @@ def partition_qids(aid2qu_file, seed, pidx):
             return rvs2qid
 
 
-class _Data:
+class Data:
     len_q = len_a = name = None
 
     def __init__(self):
@@ -237,33 +237,33 @@ class _Data:
         # print(len(self.word_vec))
         # print(len(wid_set), max(wid_set))
 
-    def form_tfidf_feature(self):
-        TaggedDocument
-        from scipy.sparse import csr_matrix, vstack
-        from scipy import io
-        wid2idf = iu.load_pickle(self.wid2idf_file)
-        X = list()
-        Y = list()
-        for _, (ql, al, ul, vl) in self.gen_train():
-            Xa = list()
-            for wids in al:
-                idf = np.zeros(len(wid2idf))
-                tf = np.zeros(len(wid2idf))
-                for wid in wids:
-                    idf[wid] = wid2idf[wid]
-                    tf[wid] += 1
-                tfidf = tf * idf
-                Xa.append(tfidf)
-            X.append(csr_matrix(Xa))
-            Y.extend(vl)
-        X = vstack(X)
-        print(X.shape)
+    # def form_tfidf_feature(self):
+    #     TaggedDocument
+    #     from scipy.sparse import csr_matrix, vstack
+    #     from scipy import io
+    #     wid2idf = iu.load_pickle(self.wid2idf_file)
+    #     X = list()
+    #     Y = list()
+    #     for _, (ql, al, ul, vl) in self.gen_train():
+    #         Xa = list()
+    #         for wids in al:
+    #             idf = np.zeros(len(wid2idf))
+    #             tf = np.zeros(len(wid2idf))
+    #             for wid in wids:
+    #                 idf[wid] = wid2idf[wid]
+    #                 tf[wid] += 1
+    #             tfidf = tf * idf
+    #             Xa.append(tfidf)
+    #         X.append(csr_matrix(Xa))
+    #         Y.extend(vl)
+    #     X = vstack(X)
+    #     print(X.shape)
 
-    def train_doc2vec(self):
-        from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-        tag = 0
-        for qid, (ql, al, _, vl) in self.qid2qauv.items():
-            model = Doc2Vec()
+    # def train_doc2vec(self):
+    #     from gensim.models.doc2vec import Doc2Vec, TaggedDocument
+    #     tag = 0
+    #     for qid, (ql, al, _, vl) in self.qid2qauv.items():
+    #         model = Doc2Vec()
 
     # def load_wid2idf(self):
     #     self.wid2idf = iu.load_pickle(self.wid2idf_file)
@@ -318,7 +318,7 @@ class _Data:
         return self.gen(S, self.qid2qauv, shuffle=False)
 
 
-class DataSo(_Data):
+class DataSo(Data):
     # ques: 139128, answ: 884261, user: 40213
     # word: 52457(w/o padding)
     name = 'so'
@@ -355,7 +355,7 @@ class DataSo(_Data):
     #     iu.copy(h + '/data/aid2qu_dict.pkl', self.aid2qu_file)
 
 
-class DataZh(_Data):
+class DataZh(Data):
     # ques: 52555, answ: 2671359, user: 168088
     # word: 65895
     name = 'zh'

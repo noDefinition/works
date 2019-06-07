@@ -9,7 +9,7 @@ class V2(V1):
     file = __file__
     
     def define_denses(self):
-        super(V2, self).define_denses()
+        super(V2, self).define_weight_params()
         sc = self.scale
         # self.D_dis_1 = Dense.normal(self.e_dim, self.m_dim, sc, activation=tf.nn.relu)
         # self.D_dis_2 = Dense.normal(self.e_dim, self.m_dim, sc, activation=tf.nn.relu)

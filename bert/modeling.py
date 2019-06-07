@@ -202,9 +202,7 @@ class BertModel(object):
                 # 为何要多此一举用squeeze
                 first_token_tensor = tf.squeeze(self.sequence_output[:, 0:1, :], axis=1)
                 self.pooled_output = tf.layers.dense(
-                    first_token_tensor,
-                    config.hidden_size,
-                    activation=tf.nn.tanh,
+                    first_token_tensor, config.hidden_size, activation=tf.nn.tanh,
                     kernel_initializer=create_initializer(config.initializer_range))
 
     def get_pooled_output(self):

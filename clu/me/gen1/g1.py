@@ -15,7 +15,7 @@ class G1(V1):
         self.gen_batch_span = args.gbs
 
     def define_denses(self):
-        super(G1, self).define_denses()
+        super(G1, self).define_weight_params()
         sc, ed, md = self.scale, self.e_dim, self.m_dim
         self.D_dis_1 = MyDense.normal(ed, md, sc, name='D_dis_1')
         self.D_dis_2 = MyDense.normal(ed, md, sc, name='D_dis_2')

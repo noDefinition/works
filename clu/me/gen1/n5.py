@@ -32,7 +32,7 @@ class N5(N1):
                                for i, n in enumerate(self.n_seqs)]
 
     def define_denses(self):
-        ed, md, init = self.w_dim, self.m_dim, self.x_init
+        ed, md, init = self.dim_w, self.dim_m, self.x_init
         self.W_1 = Dense(ed, ed, kernel=init, name='W_1')
         self.W_2 = Dense(ed, ed, kernel=init, name='W_2')
         self.W_3 = Dense(ed, ed, kernel=init, name='W_3')
@@ -59,10 +59,10 @@ class N5(N1):
         with tf.name_scope('c_embed'):
             c = (self.c_embed + self.c_noise) if c_nis else self.c_embed
         with tf.name_scope('p_mdatt'):
-            p_rep = self.p_rep_nis if w_nis else self.p_rep
+            p_rep = self.p_rep_nis if w_nis else self.p_lkup
             p_wqatt, p = self.multi_dim_att(p_rep)
         with tf.name_scope('n_mdatt'):
-            n_reps = self.n_reps_nis if w_nis else self.n_reps
+            n_reps = self.n_reps_nis if w_nis else self.n_lkups
             n = tf.concat([self.multi_dim_att(n_rep)[-1] for n_rep in n_reps], axis=0)
         if not w_nis and not c_nis:
             print('first p_wqatt')
@@ -73,7 +73,7 @@ class N5(N1):
         block_name = 'block' + ('_cnis' if c_nis else '') + ('_wnis' if w_nis else '')
         with tf.name_scope(block_name):
             c, Pd, Nd = self.get_cpn_nis(w_nis, c_nis)
-            pc_probs, Pr = self.get_c_probs_r(Pd, c, name='reconstruct_p')
+            pc_probs, Pr = self.get_probs_and_recon(Pd, c, name='reconstruct_p')
             Pd_l2, Pr_l2, Nd_l2 = l2_norm_tensors(Pd, Pr, Nd)
             PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)
             PdNd_sim = tf.matmul(Pd_l2, tf.transpose(Nd_l2))

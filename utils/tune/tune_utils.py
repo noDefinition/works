@@ -3,7 +3,6 @@ from subprocess import DEVNULL as V, Popen
 from typing import List, Tuple, Dict, Callable, Generator
 from utils import au
 from utils.tune.arg_keys import X
-# import types
 
 
 class LY:
@@ -15,11 +14,12 @@ class LY:
         self.pairs_list: List[List[Tuple]] = list(list(pairs) for pairs in target)
 
     def __add__(self, other):
-        """ 同级扩展 """
+        """ 同级并联"""
         return LY(*(self.pairs_list + other.pairs_list))
 
     def __mul__(self, other):
-        """ 前后级扩展 """
+        """ 前后级全连接 """
+        assert isinstance(other, LY)
         if len(self.pairs_list) == 0 or len(other.pairs_list) == 0:
             raise ValueError('empty layer is not allowed')
         return LY(a + b for a in self.pairs_list for b in other.pairs_list)
@@ -84,10 +84,10 @@ def subp(f, a, k, q):
 
 def run_on_end(args):
     device_id, gid = args
-    print('tu: run_on_end, gid', gid)
+    print('tu: run_on_end, gid=%d' % gid)
 
 
-def run_on_gpu(cmd_pre, od, max2frac, device_max, device_id):
+def run_on_gpu(cmd_pre: str, od: dict, max2frac: dict, device_max: dict, device_id: int):
     od.update({X.gi: device_id, X.gp: max2frac[device_max[device_id]]})
     entries = [(k if k.startswith('-') else '-' + k, v) for k, v in od.items()]
     cmd_full = cmd_pre + au.entries2name(entries, inter=' ', inner=' ')
@@ -96,7 +96,7 @@ def run_on_gpu(cmd_pre, od, max2frac, device_max, device_id):
     return device_id, od[X.gid]
 
 
-def run_od_list(cmd_pre, od_list, dev_ids, dev_max, subfunc=run_on_gpu, callback=run_on_end):
+def run_od_list(cmd_pre: str, od_list, dev_ids, dev_max, subfunc=run_on_gpu, callback=run_on_end):
     dev2max = get_dev2max(dev_ids, dev_max)
     max2frac = get_max2frac()
     args_list = [(cmd_pre, od, max2frac, dev2max) for od in od_list]

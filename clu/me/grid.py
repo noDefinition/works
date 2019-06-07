@@ -1,31 +1,35 @@
-import clu.me.main as m
 from clu.me import C
 from clu.me.gen1 import *
 from clu.data.datasets import *
-from utils import Nodes, tu
+from utils import Nodes
 from utils.tune.base_grid import BaseGrid
+from utils.tune.tune_utils import LY
 
 
 class GridClu(BaseGrid):
     def __init__(self):
         super(GridClu, self).__init__()
+        import clu.me.main as m
         self.datas, self.gpu_ids, self.gpu_max, self.vers = Nodes.select(
             # n1702=([DataEvent, DataTREC, DataGoogle], [0, 1], 3, [N6, N7]),
-            ngpu=([DataEvent, DataTREC, DataGoogle], [0], 1, [N6]),
+            # ngpu=([DataEvent, DataTREC, DataGoogle], [0, 1, 2, 3], 1, [VAE1]),
+            ngpu=(class_list, [0, 1, 2], 1, [VAE3]),
         )
-        self.comment = self.get_comment(default='try')
+        self.comment = self.get_comment(default='with_embed_dense_no_kl')
         self.modules_to_copy = [m] + self.vers
 
     def grid_od_list(self):
-        # def diff_c_num(clu_num):
-        #     return [int(i * clu_num / 10) for i in range(2, 10, 2)] + \
-        #            [int(i * clu_num / 2) for i in range(2, 11)]
-        # return (np.array([int(i * clu_num / 2) for i in range(1, 11)])).astype(int).tolist()
-        LY = tu.LY
+        embed_dim = 256
         com_ly = LY((
-            (C.lid, list(range(5))), (C.ep, [10]), (C.bs, [64]), (C.ns, [16]),
+            (C.lid, list(range(1))), (C.ep, [80]), (C.lr, [5e-4]),
+            # (C.bs, [64]), (C.ns, [16]),
         ))
-        dat_ly = LY(*[((C.dn, [d.name]), (C.cn, [d.topic_num]),) for d in self.datas])
+        dat_ly = LY((
+                        (C.dn, [d.name]),
+                        (C.cn, [d.topic_num]),
+                        (C.ed, [embed_dim]),
+                        (C.bs, [128] if d in {DataTREC, DataGoogle, DataEvent} else [32]),
+                    ) for d in self.datas)
         ver_ly = LY()
         for v in self.vers:
             tmp_ly = LY((
@@ -75,15 +79,24 @@ class GridClu(BaseGrid):
             #         (wtrn_, [1]), (ctrn_, [1]),
             #     ))
             #     tmp_ly *= part1
-            if v == N6:
-                part1 = LY((  # different cluster num
-                    (C.l3, [0]),
-                ), (
-                    (C.l3, [1]), (C.worc, [1]), (C.eps, [50]),
-                )) * LY((
-                    (C.l1, [1]), (C.l2, [1]),
+            # if v == N6:
+            #     part1 = LY((  # different cluster num
+            #         (C.l3, [0]),
+            #     ), (
+            #         (C.l3, [1]), (C.worc, [1]), (C.eps, [50]),
+            #     )) * LY((
+            #         (C.l1, [1]), (C.l2, [1]),
+            #     ))
+            #     tmp_ly *= part1
+            if v in {VAE1, VAE2, VAE3}:
+                tmp_ly *= LY((
+                    (C.pad, [1]),
+                    (C.hd, [64, 128, 256]),
+                    # (C.smt, [0.1, 0.5, 1]),
+                    # (C.ckl, [0]),
+                    # (C.ckl, [0, 0.1, 0.5]),
+                    # (C.md, [64]),
                 ))
-                tmp_ly *= part1
             ver_ly += tmp_ly
         return (com_ly * dat_ly * ver_ly).eval()
 
