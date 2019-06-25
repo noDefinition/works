@@ -51,14 +51,14 @@ class Data:
         assert embed_dim in self.support_dims
         file = self.fill_new(self.name + '_word2vec_{}.pkl'.format(embed_dim))
         if required and not iu.exists(file):
-            raise ValueError('%s does not exist, the embedding may have not been trained' % file)
+            raise ValueError('%s does not exist, embedding may have not been trained' % file)
         return file
 
     def get_clu_init_file(self, embed_dim: int, topic_ratio: float, required=True) -> str:
         assert embed_dim in self.support_dims
         file = self.fill_new(self.name + '_clu_init_{}_{:.2f}.pkl'.format(embed_dim, topic_ratio))
         if required and not iu.exists(file):
-            raise ValueError('%s does not exist, the embedding may have not been trained' % file)
+            raise ValueError('%s does not exist, embedding may have not been trained' % file)
         return file
 
     # def load_ifd_and_docarr(self):

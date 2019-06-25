@@ -22,24 +22,25 @@ class CluArgs(Args):
         self.l3 = self.add_arg('l3', type=float, help='lambda for point-wise loss')
         self.l4 = self.add_arg('l4', type=float, help='lambda for regularization loss')
 
-        self.drp = self.add_arg('drp', type=float, default=1., help='dropout keep prob')
-        self.mgn = self.add_arg('mgn', type=float, default=1., help='margin in hinge loss')
+        self.drp = self.add_arg('drp', type=float, help='dropout keep prob')
+        self.mgn = self.add_arg('mgn', type=float, help='margin in hinge loss')
         self.smt = self.add_arg('smt', type=float, help='smoothness of labels')
         self.ckl = self.add_arg('ckl', type=float, help='coefficient of kl divergence in VAE')
+        self.psmp = self.add_arg('psmp', type=int, help='position of sampling')
 
         # self.bn = self.add_arg('bn', type=int, help='if use batch normalization')
-        # self.wini = self.add_arg('wini', type=int, help='word embed 0:random, 1:pre-trained')
-        # self.cini = self.add_arg('cini', type=int, help='cluster embed 0:random, 1:pre-trained')
         # self.wtrn = self.add_arg('wtrn', type=int, help='if train word embedding')
         # self.ctrn = self.add_arg('ctrn', type=int, help='if train cluster embedding')
+        self.wini = self.add_arg('wini', type=int, help='word embed 0:random, 1:pre-trained')
+        self.cini = self.add_arg('cini', type=int, help='cluster embed 0:random, 1:pre-trained')
 
         self.ptn = self.add_arg('ptn', type=int, help='epoch num for pre-training')
         self.worc = self.add_arg('worc', type=int, help='0:word noise, 1: embed noise')
         self.eps = self.add_arg('eps', type=float, help='epsilon for adv grad')
         self.tpk = self.add_arg('tpk', type=int, help='top k for word feature')
 
-        # self.max_epoch = 'max_epoch'
-        # self.max_batch = 'max_batch'
+        self.ptp = self.add_arg('ptp', type=int, help='probability type')
+        self.kalp = self.add_arg('kalp', type=float, help='alpha of kernel function')
 
 
 C = CluArgs()

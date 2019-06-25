@@ -1,22 +1,16 @@
 class Nodes:
-    alias_1702 = '1702'
-    alias_gpu = 'gpu'
-    alias_cpu = 'cpu'
+    upart_1702 = 'aida-lab-1702'
+    upart_gpu = 'AIDA1080Ti'
+    upart_cpu = 'compute-AIDA14-ubuntu'
+    upart_new = 'aida-1702-02'
 
-    uname_1702 = 'aida-lab-1702'
-    uname_gpu = 'AIDA1080Ti'
-    uname_cpu = 'compute-AIDA14-ubuntu'
-
-    uname_cache = alias_cache = None
-    supported_pairs = [(uname_1702, alias_1702), (uname_gpu, alias_gpu), (uname_cpu, alias_cpu)]
+    uname_cache: str = None
+    upart_cache: str = None
+    supported_uparts = [upart_1702, upart_gpu, upart_cpu, upart_new]
     dft = object()
 
     @staticmethod
-    def is_alias_supported(node_alias):
-        return node_alias in {Nodes.alias_1702, Nodes.alias_gpu, Nodes.alias_cpu}
-
-    @staticmethod
-    def get_uname():
+    def get_uname_full():
         if Nodes.uname_cache is None:
             from subprocess import Popen, PIPE as P
             sub = Popen("uname -a", stdin=P, stdout=P, stderr=P, shell=True, bufsize=1)
@@ -26,42 +20,51 @@ class Nodes:
 
     @staticmethod
     def get_alias():
-        if Nodes.alias_cache is None:
-            uname_full = Nodes.get_uname()
-            for uname_part, alias in Nodes.supported_pairs:
-                if uname_part in uname_full:
-                    Nodes.alias_cache = alias
-                    print('USE SERVER @ {}'.format(Nodes.alias_cache))
-                    return alias
-            if Nodes.alias_cache is None:
-                raise ValueError('unsupported node: "{}"'.format(uname_full))
-        return Nodes.alias_cache
+        if Nodes.upart_cache is None:
+            uname_full = Nodes.get_uname_full()
+            for upart in Nodes.supported_uparts:
+                if upart in uname_full:
+                    Nodes.upart_cache = upart
+                    print('USE SERVER @ {}'.format(upart))
+                    return Nodes.upart_cache
+            raise ValueError('unsupported node: "{}"'.format(uname_full))
+        return Nodes.upart_cache
 
     @staticmethod
-    def select(n1702=dft, ngpu=dft, ncpu=dft, default=dft):
-        table = {Nodes.alias_1702: n1702, Nodes.alias_gpu: ngpu, Nodes.alias_cpu: ncpu}
+    def select(n1702=dft, ngpu=dft, ncpu=dft, nnew=dft, default=dft):
+        table = {
+            Nodes.upart_1702: n1702,
+            Nodes.upart_gpu: ngpu,
+            Nodes.upart_cpu: ncpu,
+            Nodes.upart_new: nnew,
+        }
         result = table.get(Nodes.get_alias())
         if result is not Nodes.dft:
             return result
         else:
             if default is Nodes.dft:
-                raise ValueError('dc: [{}] uses default value, but no default value is given'.
-                                 format(Nodes.get_alias()))
+                raise ValueError(
+                    'dc: [{}] uses default value, but no default value is given'.
+                        format(Nodes.get_alias()))
             else:
                 return default
 
     @staticmethod
-    def max_cpu_num():
-        return Nodes.select(n1702=12, ngpu=32, ncpu=20)
-
-    @staticmethod
     def is_1702():
-        return Nodes.get_alias() == Nodes.alias_1702
+        return Nodes.get_alias() == Nodes.upart_1702
 
     @staticmethod
     def is_gpu():
-        return Nodes.get_alias() == Nodes.alias_gpu
+        return Nodes.get_alias() == Nodes.upart_gpu
 
     @staticmethod
     def is_cpu():
-        return Nodes.get_alias() == Nodes.alias_cpu
+        return Nodes.get_alias() == Nodes.upart_cpu
+
+    @staticmethod
+    def is_new():
+        return Nodes.get_alias() == Nodes.upart_new
+
+    @staticmethod
+    def max_cpu_num():
+        return Nodes.select(n1702=12, ngpu=32, ncpu=20, nnew=12)

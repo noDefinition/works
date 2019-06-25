@@ -36,6 +36,9 @@ class Runner:
                 self.param_file = iu.join(self.writer_path, 'model.ckpt')
                 iu.mkdir(self.writer_path, rm_prev=True)
 
+        for k, v in list(args.items()):
+            if v is None:
+                args.pop(k)
         self.model = name2m_class[self.model_name](args)
         self.sampler = Sampler(self.data_name)
         self.history = list()
@@ -81,10 +84,6 @@ class Runner:
             self.ppp('use padding length {}'.format(self.sampler.d_obj.seq_len))
 
     def build_model(self):
-        # if self.e_init == 0:
-        #     self.ppp('random w & c embed')
-        #     w_embed = np.random.normal(0., self.scale, size=w_embed.shape)
-        #     c_embed = np.random.normal(0., self.scale, size=c_embed.shape)
         self.model.build(self.sampler.word_embed_init, self.sampler.clu_embed_init)
         self.model.set_session(get_session(self.gpu_id, 0.6, allow_growth=False))
 

@@ -6,17 +6,19 @@ from typing import List
 
 
 # noinspection PyAttributeOutsideInit
-class VAE1:
+class VAE1(object):
     def __init__(self, args: dict):
+        print(tf.__version__)
         self.lr: float = args[C.lr]
         self.dim_h: int = args[C.hd]
-        self.smooth: float = args.get(C.smt, 1)
-        self.coeff_kl: float = args.get(C.ckl, 1)
-        # self.dim_m: int = args[C.md]
+        self.smooth: float = args[C.smt]
+        self.coeff_kl: float = args[C.ckl]
+        self.c_init: int = args[C.cini]
+        self.w_init: int = args[C.wini]
+        assert self.dim_h is not None
         # self.dropout: float = args[C.drp]
-        # assert 0 <= self.dropout <= 1
-        assert 0 <= self.smooth <= 1
-        assert 0 <= self.coeff_kl <= 1
+        # assert self.smooth is not None and 0 <= self.smooth <= 1
+        # assert self.coeff_kl is not None and 0 <= self.coeff_kl <= 1
 
         self.x_init = tf.contrib.layers.xavier_initializer()
         self.global_step = tf.Variable(0, name='global_step')
@@ -25,19 +27,22 @@ class VAE1:
 
     def define_cluster_embed(self, clu_init):
         self.num_c, self.dim_c = clu_init.shape
-        init = tf.constant_initializer(clu_init)
+        # init = tf.constant_initializer(clu_init)
+        init = [self.x_init, tf.constant_initializer(clu_init)][self.c_init]
         self.c_embed = tf.get_variable('c_embed', clu_init.shape, initializer=init)  # (cn, dw)
-        init = tf.zeros_initializer()
+        # init = tf.zeros_initializer()
+        init = tf.random_normal_initializer(stddev=1e-1)
         self.c_logvar = tf.get_variable('c_logvar', clu_init.shape, initializer=init)  # (cn, dw)
 
     def define_word_embed(self, word_init):
         # trainable = [False, True][self.w_train]
         self.num_w, self.dim_w = word_init.shape
         self.num_w += 1
-        init = tf.constant_initializer(word_init)
-        emb = tf.get_variable('w_emb', word_init.shape, initializer=init)
-        pad = tf.zeros([1, word_init.shape[1]], name='w_pad', dtype=f32)
-        self.w_embed = tf.concat([pad, emb], axis=0, name='w_embed')
+        # init = tf.constant_initializer(word_init)
+        init = [self.x_init, tf.constant_initializer(word_init)][self.w_init]
+        emb = tf.get_variable('w_emb', word_init.shape, initializer=init)  # (wn, dw)
+        pad = tf.zeros([1, word_init.shape[1]], name='w_pad', dtype=f32)  # (1, dw)
+        self.w_embed = tf.concat([pad, emb], axis=0, name='w_embed')  # (wn+1, dw)
 
     def define_inputs(self):
         lk = tf.nn.embedding_lookup
@@ -66,39 +71,27 @@ class VAE1:
         self.decode_lstm = CuDNNLSTM(self.dim_h, return_state=True, return_sequences=True)
 
     def sample_z(self, mu, var, name: str):
+        # var is positive here
         with tf.name_scope(name):
             gaussian = tf.random_normal(shape=tf.shape(mu), name='gaussian')
             # z = mu + tf.exp(var * 0.5) * gaussian
             z = mu + var * gaussian  # (bs, dw)
             sample = tf.cond(self.ph_is_train, true_fn=lambda: z, false_fn=lambda: mu)
+            # sample = z
         return sample
 
     @staticmethod
-    def get_normal_kl(mu, var, name: str):
+    def get_normal_kl(mu, std, name: str):
         with tf.name_scope(name):
             # log_var = log_var * 0.5
             # neg_log_var = - tf.reduce_mean(var)
             # var_square = tf.reduce_mean(tf.exp(var))
             # mu_square = tf.reduce_mean(tf.square(mu))
             mu_square = tf.square(mu)  # (bs, dw)
-            neg_log_var = - tf.log(var)  # (bs, dw)
-            elements = tf.add_n([mu_square, neg_log_var, var])  # (bs, dw)
+            neg_log_var = - tf.log(std)  # (bs, dw)
+            elements = tf.add_n([mu_square, neg_log_var, std])  # (bs, dw)
             kld = tf.reduce_mean(tf.reduce_sum(elements, axis=-1))  # * 0.5
         return kld
-
-    # @staticmethod
-    # def top_k(inputs, k: int, name='top_k'):
-    #     with tf.variable_scope(name):
-    #         inputs = tf.transpose(inputs, [0, 2, 1])
-    #         inputs = tf.nn.top_k(inputs, k).values
-    #         inputs = tf.transpose(inputs, [0, 2, 1])
-    #     return inputs
-    #
-    # def top_k_mean(self, inputs, k: int, name='top_k_mean'):
-    #     with tf.variable_scope(name):
-    #         top_k_values = self.top_k(inputs, k)
-    #         o = tf.reduce_mean(top_k_values, 1)
-    #     return o
 
     def get_doc_embed(self, inputs, name):
         with tf.name_scope(name):
@@ -117,9 +110,12 @@ class VAE1:
         # z_p_d = instant_denses(z_p, [(self.dim_h, None)], name='z_p_dense')  # (bs, hd)
         z_p_d = z_p
 
-        decoder_output, _, _ = self.decode_lstm(
-            self.p_lkup, initial_state=[z_p_d, z_p_d], training=self.ph_is_train)
-        uas = [(self.dim_m, relu), (self.num_w, None)]
+        z_p_d = tf.expand_dims(z_p_d, axis=1, name='zpd_expand')
+        decode_inputs = tf.add(self.p_lkup, z_p_d, name='decode_inputs')
+        decoder_output, _, _ = self.decode_lstm(decode_inputs, training=self.ph_is_train)
+        # decoder_output, _, _ = self.decode_lstm(
+        #     self.p_lkup, initial_state=[z_p_d, z_p_d], training=self.ph_is_train)
+        uas = [(self.dim_h, relu), (self.dim_h * 2, relu), (self.num_w, None)]
         decode_preds = instant_denses(decoder_output, uas, 'decode_preds')  # (bs, tn, nw)
 
         p_shift_hot = tf.one_hot(
@@ -141,7 +137,7 @@ class VAE1:
         self.total_loss = tf.add_n([
             right_ce_loss,
             wrong_ce_loss,
-            z_prior_kl * self.coeff_kl,
+            # z_prior_kl * self.coeff_kl,
         ], name='total_loss')
 
         self.z_p = z_p

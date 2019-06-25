@@ -6,23 +6,34 @@ from utils.tune.arg_keys import X
 
 
 class LY:
-    def __init__(self, *pairs_list):
-        if len(pairs_list) == 1 and isinstance(pairs_list[0], Generator):
-            target = pairs_list[0]
-        else:
-            target = pairs_list
-        self.pairs_list: List[List[Tuple]] = list(list(pairs) for pairs in target)
+    # def __init__(self, *pairs_list):
+    #     if len(pairs_list) == 1 and isinstance(pairs_list[0], Generator):
+    #         target = pairs_list[0]
+    #     else:
+    #         target = pairs_list
+    #     self.pairs_list: List[List[Tuple]] = list(list(pairs) for pairs in target)
+
+    def __init__(self, *args):
+        if len(args) == 1 and isinstance(args[0], Generator):
+            args = args[0]
+        self.pairs_list = list(list(arg.items()) for arg in args)
 
     def __add__(self, other):
         """ 同级并联"""
-        return LY(*(self.pairs_list + other.pairs_list))
+        ret = LY({})
+        ret.pairs_list = self.pairs_list + other.pairs_list
+        return ret
+        # return LY(*(self.pairs_list + other.pairs_list))
 
     def __mul__(self, other):
         """ 前后级全连接 """
         assert isinstance(other, LY)
         if len(self.pairs_list) == 0 or len(other.pairs_list) == 0:
             raise ValueError('empty layer is not allowed')
-        return LY(a + b for a in self.pairs_list for b in other.pairs_list)
+        ret = LY({})
+        ret.pairs_list = [a + b for a in self.pairs_list for b in other.pairs_list]
+        return ret
+        # return LY(a + b for a in self.pairs_list for b in other.pairs_list)
 
     def eval(self):
         return au.merge(au.grid_params(pairs) for pairs in self.pairs_list)
@@ -116,8 +127,8 @@ def get_dev2max(dev_ids, dev_max):
 
 def get_max2frac():
     max2frac = {1: 0.87, 2: 0.43, 3: 0.29, 4: 0.22}
-    max2frac[1] = 0.5
-    max2frac[2] = 0.3
+    max2frac[1] = 0.8
+    max2frac[2] = 0.45
     return max2frac
 
 

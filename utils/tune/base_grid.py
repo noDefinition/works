@@ -44,6 +44,7 @@ class BaseGrid(object):
         log_path = self.make_log_path(make_new=True)
         self.copy_files_to(log_path)
         od_list = self.grid_od_list()
+        # od_list = tu.update_od_list(od_list, log_path, shuffle=True)
         tu.update_od_list(od_list, log_path, shuffle=True)
         tu.run_od_list('python3.6 ./main.py ', od_list, self.gpu_ids, self.gpu_max)
         new_path = log_path + '_OVER'

@@ -29,7 +29,7 @@ class VAE2(VAE1):
 
         decoder_outputs, _, _ = self.decode_lstm(
             self.p_lkup, initial_state=[z_p_d, z_p_d], training=self.ph_is_train)
-        uas = [(self.dim_m, tanh), (self.num_w, None)]
+        uas = [(self.dim_h, tanh), (self.num_w, None)]
         decode_preds = instant_denses(decoder_outputs, uas, 'decode_preds')  # (bs, tn, nw)
 
         p_shift_hot = tf.one_hot(
