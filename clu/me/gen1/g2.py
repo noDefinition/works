@@ -30,7 +30,7 @@ class G2(G1):
         with tf.name_scope('discriminate'):
             p_score_D = self.DL_dis(p)
             r_score_D = self.DL_dis(r)
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 p_score_D_v = tf.reduce_mean(p_score_D)
                 r_score_D_v = tf.reduce_mean(1. - r_score_D)
                 loss_D = -(p_score_D_v + r_score_D_v)
@@ -43,7 +43,7 @@ class G2(G1):
             pn_sim_G_v = tf.reduce_mean(pn_sim_G, axis=1, keepdims=True)
             # rn_sim_G = tensor_dot(r_norm, tf.transpose(n_norm))
             # rn_sim_G_v = tf.reduce_mean(rn_sim_G, axis=1, keepdims=True)
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 reg_G = sum([d.get_norm(order=2) for d in self.W_doc]) * l4
                 loss_G_pre = tf.reduce_mean(
                     tf.maximum(0., mgn - pr_sim_G + pn_sim_G_v * l1)) + reg_G

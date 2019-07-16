@@ -3,12 +3,22 @@ from clu.me import C
 from utils.deep.funcs import *
 from tensorflow.keras.layers import Masking, CuDNNLSTM
 from typing import List
+from utils.doc_utils import Document
 
 
 # noinspection PyAttributeOutsideInit
 class VAE1(object):
     def __init__(self, args: dict):
-        print(tf.__version__)
+        self.x_init = tf.contrib.layers.xavier_initializer()
+        self.global_step = 0
+        self.debug_parts = []
+        self.sess = None
+        self.pc_probs = None
+        self.train_op = None
+        self.train_loss = None
+        self.get_hyper_params(args)
+
+    def get_hyper_params(self, args):
         self.lr: float = args[C.lr]
         self.dim_h: int = args[C.hd]
         self.smooth: float = args[C.smt]
@@ -19,11 +29,6 @@ class VAE1(object):
         # self.dropout: float = args[C.drp]
         # assert self.smooth is not None and 0 <= self.smooth <= 1
         # assert self.coeff_kl is not None and 0 <= self.coeff_kl <= 1
-
-        self.x_init = tf.contrib.layers.xavier_initializer()
-        self.global_step = tf.Variable(0, name='global_step')
-        self.global_step_inc = tf.assign(self.global_step, tf.add(self.global_step, 1))
-        self.sess: tf.Session = None
 
     def define_cluster_embed(self, clu_init):
         self.num_c, self.dim_c = clu_init.shape
@@ -48,7 +53,7 @@ class VAE1(object):
         lk = tf.nn.embedding_lookup
         self.ph_if_sample = tf.placeholder(tf.bool, (), name='if_sample')
         self.ph_is_train = tf.placeholder(tf.bool, (), name='is_train')
-        # self.ph_drop_keep = tf.placeholder_with_default(1., (), name='dropout_keep')
+        self.ph_drop_keep = tf.placeholder_with_default(1., (), name='dropout_keep')
         self.p_wids = tf.placeholder(i32, (None, None), name='p_seq')  # (bs, tn)
         self.p_mask = self.get_mask(self.p_wids, False, name='p_mask')  # (bs, tn)
         self.p_lkup = lk(self.w_embed, self.p_wids, name='p_lkup')  # (bs, tn, dw)
@@ -81,15 +86,18 @@ class VAE1(object):
         return sample
 
     @staticmethod
-    def get_normal_kl(mu, std, name: str):
+    def get_normal_kl(mu, std, reg_mu: bool, name: str):
         with tf.name_scope(name):
             # log_var = log_var * 0.5
             # neg_log_var = - tf.reduce_mean(var)
             # var_square = tf.reduce_mean(tf.exp(var))
             # mu_square = tf.reduce_mean(tf.square(mu))
-            mu_square = tf.square(mu)  # (bs, dw)
-            neg_log_var = - tf.log(std)  # (bs, dw)
-            elements = tf.add_n([mu_square, neg_log_var, std])  # (bs, dw)
+            if reg_mu:
+                mu_square = tf.square(mu)  # (bs, dw)
+            else:
+                mu_square = tf.zeros(tf.shape(mu))  # (bs, dw)
+            neg_log_std = - tf.log(std)  # (bs, dw)
+            elements = tf.add_n([mu_square, neg_log_std, std])  # (bs, dw)
             kld = tf.reduce_mean(tf.reduce_sum(elements, axis=-1))  # * 0.5
         return kld
 
@@ -134,16 +142,16 @@ class VAE1(object):
         wrong_ce_loss = - tf.reduce_mean(wrong_ce_mask, name='wrong_ce_loss')
 
         z_prior_kl = self.get_normal_kl(pc_recon, pc_stdvar, name='z_prior_kl')
-        self.total_loss = tf.add_n([
+        self.train_loss = tf.add_n([
             right_ce_loss,
             wrong_ce_loss,
             # z_prior_kl * self.coeff_kl,
         ], name='total_loss')
 
-        self.z_p = z_p
-        self.z_p_d = z_p_d
+        # self.z_p = z_p
+        # self.z_p_d = z_p_d
+        # self.decode_preds = decode_preds
         self.pc_probs = pc_probs
-        self.decode_preds = decode_preds
 
         self.merge_mid = su.merge([
             histogram(name='z_p', values=z_p, family='z'),
@@ -154,17 +162,17 @@ class VAE1(object):
             histogram(name='decode_preds', values=decode_preds, family='decode'),
         ])
         self.merge_loss = su.merge([
-            scalar(name='right_ce_loss', tensor=right_ce_loss, family='loss'),
-            scalar(name='wrong_ce_loss', tensor=wrong_ce_loss, family='loss'),
-            scalar(name='z_prior_kl', tensor=z_prior_kl, family='loss'),
-            scalar(name='total_loss', tensor=self.total_loss, family='loss'),
+            scalar(name='right_ce_loss', tensor=right_ce_loss, family='gen2'),
+            scalar(name='wrong_ce_loss', tensor=wrong_ce_loss, family='gen2'),
+            scalar(name='z_prior_kl', tensor=z_prior_kl, family='gen2'),
+            scalar(name='total_loss', tensor=self.train_loss, family='gen2'),
         ])
 
     def define_optimizer(self):
         lr = tf.train.exponential_decay(
             learning_rate=self.lr, global_step=self.global_step, decay_steps=200, decay_rate=0.99)
-        optimizer = tf.train.AdamOptimizer(learning_rate=lr, name='AAAAdam')
-        self.cross_op = optimizer.minimize(self.total_loss)
+        self.optimizer = tf.train.AdamOptimizer(learning_rate=lr, name='AAAAdam')
+        self.train_op = self.optimizer.minimize(self.train_loss)
 
     def build(self, word_init, clu_init):
         self.define_word_embed(word_init)
@@ -176,26 +184,27 @@ class VAE1(object):
 
     """ runtime below """
 
-    def get_fd(self, p_seq: List[List[int]], is_train: bool) -> dict:
+    def get_fd(self, docarr: List[Document], is_train: bool, **kwargs) -> dict:
+        p_seq = [doc.tokenids for doc in docarr]
         return {self.p_wids: p_seq, self.ph_is_train: is_train}
 
-    def train_step(self, p_seq, epoch_i, batch_i, *args, **kwargs):
-        fd = self.get_fd(p_seq, is_train=True)
-        self.sess.run(self.cross_op, feed_dict=fd)
-        self.sess.run(self.global_step_inc)
-
-    def predict(self, p_seq) -> List[int]:
-        pc_probs = self.run_parts(p_seq, self.pc_probs)
+    def predict(self, docarr: List[Document]) -> List[int]:
+        pc_probs = self.run_parts(docarr, self.pc_probs)
         return np.argmax(pc_probs, axis=1).reshape(-1)
 
-    def run_parts(self, p_seq, *parts):
+    def run_parts(self, docarr: List[Document], *parts):
         assert len(parts) > 0
-        fd = self.get_fd(p_seq, is_train=False)
+        fd = self.get_fd(docarr, is_train=False)
         parts_res = self.sess.run(parts, feed_dict=fd)
         return parts_res if len(parts_res) > 1 else parts_res[0]
 
-    def run_merge(self, p_seq, merge):
-        fd = self.get_fd(p_seq, is_train=False)
+    def train_step(self, docarr: List[Document], epoch_i: int, batch_i: int, **kwargs):
+        fd = self.get_fd(docarr, is_train=True)
+        self.sess.run(self.train_op, feed_dict=fd)
+        self.global_step += 1
+
+    def run_merge(self, docarr: List[Document], merge):
+        fd = self.get_fd(docarr, is_train=False)
         return self.sess.run(merge, feed_dict=fd)
 
     def set_session(self, sess):

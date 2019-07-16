@@ -162,27 +162,40 @@ def run_gsdmm(kwargs: dict):
 
 
 def run_gsdmm_using_kwargs(result_file):
-    rerun_num = 2
+    rerun_num = 4
     ratios = np.concatenate([np.arange(0.2, 1, 0.2), np.arange(1, 5.1, 0.5)])
     # ratios = np.array([1, 2, 3])
     # ('iter_num', [5]),
-    common = tu.LY((
-        ('iter_num', [100]),
-        ('seed', [(i + np.random.randint(0, 1000)) for i in range(rerun_num)]),
-    ))
-    datas = tu.LY((
-        ('dname', [DataTREC.name]),
-        ('alpha', [0.01]), ('beta', [0.01]),
-        ('k', (ratios * DataTREC.topic_num).astype(np.int32)),
-        ), (
-            ('dname', [DataGoogle.name]),
-            ('alpha', [1, 0.1]), ('beta', [0.01]),
-            ('k', (ratios * DataGoogle.topic_num).astype(np.int32)),
-        ), (
-            ('dname', [DataEvent.name]),
-            ('alpha', [1, 0.1, 0.01]), ('beta', [1, 0.1, 0.01]),
-            ('k', (ratios * DataEvent.topic_num).astype(np.int32)),
-    ))
+    common = tu.LY({
+        'iter_num': [100],
+        'seed': [(i + np.random.randint(0, 1000)) for i in range(rerun_num)],
+    })
+    datas = tu.LY({
+        'dname': [DataTrec.name],
+        'alpha': [0.01],
+        'beta': [0.01],
+        'k': (ratios * DataTrec.topic_num).astype(np.int32),
+    }, {
+        'dname': [DataGoogle.name],
+        'alpha': [1, 0.1],
+        'beta': [0.01],
+        'k': (ratios * DataGoogle.topic_num).astype(np.int32),
+    }, {
+        'dname': [DataEvent.name],
+        'alpha': [1, 0.1, 0.01],
+        'beta': [1, 0.1, 0.01],
+        'k': (ratios * DataEvent.topic_num).astype(np.int32),
+    }, {
+        'dname': [DataReuters.name],
+        'alpha': [1, 0.1, 0.01],
+        'beta': [0.1],
+        'k': (ratios * DataReuters.topic_num).astype(np.int32),
+    }, {
+        'dname': [Data20ng.name],
+        'alpha': [1, 0.1, 0.01],
+        'beta': [0.1],
+        'k': (ratios * Data20ng.topic_num).astype(np.int32),
+    })
     od_list = (common * datas).eval()
     print(len(od_list))
     res_list = mu.multi_process_batch(run_gsdmm, 20, [(od,) for od in od_list])
@@ -224,13 +237,13 @@ def run_one_d_class(d_cls):
 def one_run_for_word_distribution():
     from utils import mu
     # run_one_d_class(DataTREC)
-    mu.multi_process(run_one_d_class, [(d,) for d in [DataTREC, DataGoogle, DataEvent]])
+    mu.multi_process(run_one_d_class, [(d,) for d in [DataTrec, DataGoogle, DataEvent]])
 
 
 if __name__ == '__main__':
     from utils.node_utils import Nodes
 
-    run_gsdmm_using_kwargs('gsdmm_results.csv')
+    run_gsdmm_using_kwargs('gsdmm_results_0707.csv')
     exit()
     # one_run_for_word_distribution()
     # exit()

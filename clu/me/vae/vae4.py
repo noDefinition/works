@@ -72,7 +72,7 @@ class VAE4(VAE1):
             histogram(name='decode_preds', values=decode_preds, family='decode'),
         ])
         self.merge_loss = su.merge([
-            scalar(name='total_loss', tensor=self.total_loss, family='loss'),
+            scalar(name='total_loss', tensor=self.total_loss, family='gen2'),
         ])
 
     def define_optimizer(self):

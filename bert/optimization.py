@@ -106,13 +106,13 @@ class AdamWeightDecayOptimizer(tf.train.Optimizer):
             next_v = tf.multiply(self.beta_2, v) + tf.multiply(1.0 - self.beta_2, tf.square(grad))
             update = next_m / (tf.sqrt(next_v) + self.epsilon)
 
-            # Just adding the square of the weights to the loss function is *not*
+            # Just adding the square of the weights to the gen2 function is *not*
             # the correct way of using L2 regularization/weight decay with Adam,
             # since that will interact with the m and v parameters in strange ways.
             #
             # Instead we want ot decay the weights in a manner that doesn't interact
             # with the m/v parameters. This is equivalent to adding the square
-            # of the weights to the loss with plain (non-momentum) SGD.
+            # of the weights to the gen2 with plain (non-momentum) SGD.
             if self._do_use_weight_decay(param_name):
                 update += self.weight_decay_rate * param
             update_with_lr = self.learning_rate * update

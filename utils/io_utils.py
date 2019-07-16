@@ -134,7 +134,8 @@ def most_recent(files, full_path=True):
 
 
 def choose_from(files, full_path=True):
-    file_objs = sorted([Path(f) for f in files], key=lambda p: p.stat().st_mtime)[::-1]
+    # file_objs = sorted([Path(f) for f in files], key=lambda p: p.stat().st_mtime)[::-1]
+    file_objs = sorted([Path(f) for f in files], key=lambda p: p.name)[::-1]
     for idx, c in enumerate(file_objs):
         print('*' if idx == 0 else ' ', '{} - {}'.format(idx, c.name))
     while True:

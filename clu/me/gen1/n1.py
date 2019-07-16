@@ -106,7 +106,7 @@ class N1(object):
         with tf.name_scope('similarity'):
             pc_probs, Pr = self.get_probs_and_recon(Pd, c, 'reconstruct_p')
             _, Nr = self.get_probs_and_recon(Nd, c, 'reconstruct_n')
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 Pd_l2, Pr_l2, Nd_l2, Nr_l2 = l2_norm_tensors(Pd, Pr, Nd, Nr)
                 PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)
                 PdNd_sim = tf.matmul(Pd_l2, tf.transpose(Nd_l2))
@@ -117,7 +117,7 @@ class N1(object):
                 # DnDp_sim = tf.transpose(PdNd_sim_v)
                 # DnDp_sim_v = tf.reduce_mean(DnDp_sim, axis=1, keepdims=True)
                 # nr_np_mgn = tf.maximum(0.0, 1.0 - DnRn_sim + DnDp_sim_v * l1)
-                """merge loss"""
+                """merge gen2"""
                 pairwise = tf.reduce_mean(PdPr_PdNd_mgn)  # + tf.reduce_mean(nr_np_mgn)
                 pointwise = tf.reduce_mean(PdPr_sim)  # + tf.reduce_mean(GnRn_sim)
                 reg_loss = sum(w.get_norm(order=2) for w in self.W_doc)
@@ -145,7 +145,7 @@ class N1(object):
                 D_true_org = tf.tile(tf.constant([1. - self.smooth]), tf.shape(D_pred_org))
                 D_true_res = tf.tile(tf.constant([self.smooth]), tf.shape(D_pred_res))
                 D_true = tf.concat([D_true_org, D_true_res], axis=0)
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 cross_entropy = tf.nn.sigmoid_cross_entropy_with_logits
                 cross = cross_entropy(labels=D_true, logits=D_pred)
                 dis_loss = tf.reduce_mean(cross) * l2

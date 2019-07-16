@@ -160,7 +160,8 @@ def entries2name(entries, include=None, exclude=None, inner='=', inter=',', post
         kv_list = entries
     else:
         raise TypeError('unexpected type : {}'.format(type(entries)))
-    pairs = ['{}{}{}'.format(k, inner, v) for k, v in kv_list if _can_include(k, include, exclude)]
+    # pairs = ['{}{}{}'.format(k, inner, v) for k, v in kv_list if _can_include(k, include, exclude)]
+    pairs = [f'{k}{inner}{v}' for k, v in kv_list if _can_include(k, include, exclude)]
     return inter.join(pairs) + postfix
 
 

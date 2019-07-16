@@ -13,12 +13,12 @@ class N8(N6):
         with tf.name_scope('similarity'):
             pc_probs, Pr = self.get_probs_and_recon(Pd, c, 'reconstruct_p')
             _, Nr = self.get_probs_and_recon(Nd, c, 'reconstruct_n')
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 Pd_l2, Pr_l2, Nd_l2, Nr_l2 = l2_norm_tensors(Pd, Pr, Nd, Nr)
                 PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)
                 PdNd_sim = tf.matmul(Pd_l2, tf.transpose(Nd_l2))
                 pairwise_margin = tf.maximum(0., self.margin - PdPr_sim + PdNd_sim)
-                """merge loss"""
+                """merge gen2"""
                 pairwise = tf.reduce_mean(pairwise_margin)
                 pointwise = tf.reduce_mean(PdPr_sim)
                 reg_loss = sum(w.get_norm(order=2) for w in self.W_doc)

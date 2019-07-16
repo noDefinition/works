@@ -156,7 +156,7 @@ class Analyze(object):
         # # if 'abal_wo_L1L2' in log_path:
         # #     group_by = [l1_, l2_, l3_, worc_]
         # #     comment = 'abal_wo_L1L2'
-        self.exclude = {C.ep, C.cn, C.bs, C.ns, C.gi, C.gp, C.lid, C.mgn}
+        self.exclude = {C.ep, C.cn, C.ns, C.gi, C.gp, C.mgn}
         # self.group_by = None
         self.log_path = self.get_log_path()
         log_name = iu.get_name(self.log_path)

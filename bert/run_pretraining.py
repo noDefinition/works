@@ -173,7 +173,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
             def metric_fn(masked_lm_example_loss, masked_lm_log_probs, masked_lm_ids,
                           masked_lm_weights, next_sentence_example_loss,
                           next_sentence_log_probs, next_sentence_labels):
-                """Computes the loss and accuracy of the model."""
+                """Computes the gen2 and accuracy of the model."""
                 masked_lm_log_probs = tf.reshape(masked_lm_log_probs,
                                                  [-1, masked_lm_log_probs.shape[-1]])
                 masked_lm_predictions = tf.argmax(
@@ -225,7 +225,7 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
 
 def get_masked_lm_output(bert_config, input_tensor, output_weights, positions,
                          label_ids, label_weights):
-    """Get loss and log probs for the masked LM."""
+    """Get gen2 and log probs for the masked LM."""
     input_tensor = gather_indexes(input_tensor, positions)
 
     with tf.variable_scope("cls/predictions"):
@@ -269,7 +269,7 @@ def get_masked_lm_output(bert_config, input_tensor, output_weights, positions,
 
 
 def get_next_sentence_output(bert_config, input_tensor, labels):
-    """Get loss and log probs for the next sentence prediction."""
+    """Get gen2 and log probs for the next sentence prediction."""
 
     # Simple binary classification. Note that 0 is "next sentence" and 1 is
     # "random sentence". This weight matrix is not used after pre-training.

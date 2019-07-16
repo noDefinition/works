@@ -128,4 +128,4 @@ class R1(P1):
             [self.decode_loss, self.margin_loss, self.reg_loss, self.total_loss],
             feed_dict=fd
         )
-        return dict(zip(['decode loss', 'margin loss', 'reg loss', 'total loss'], losses))
+        return dict(zip(['decode gen2', 'margin gen2', 'reg gen2', 'total gen2'], losses))

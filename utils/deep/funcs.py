@@ -1,6 +1,8 @@
+from typing import List
 import tensorflow as tf
 import tensorflow.summary as su
 from tensorflow.summary import histogram, scalar
+from tensorflow.keras.layers import Dense
 
 i16 = tf.int16
 i32 = tf.int32
@@ -14,22 +16,31 @@ tanh = tf.nn.tanh
 sigmoid = tf.nn.sigmoid
 softmax = tf.nn.softmax
 
+
 # histogram = su.histogram
 # scalar = su.scalar
 
 
-def instant_denses(inputs, uas, name, w_init=None, w_reg=None):
+def instant_denses(inputs, uas, name: str, use_bias: bool = True,
+                   w_init=None, w_reg=None, full_outputs: bool = False):
+    output = inputs
+    layers = list()
     for i, (u, a) in enumerate(uas):
-        inputs = tf.layers.dense(
-            inputs, u, activation=a, name='{}_{}'.format(name, i),
-            kernel_initializer=w_init, kernel_regularizer=w_reg,
+        output = tf.layers.dense(
+            output, units=u, activation=a, name='{}_{}'.format(name, i),
+            use_bias=use_bias, kernel_initializer=w_init, kernel_regularizer=w_reg,
         )
-    return inputs
+        layers.append(output)
+    return layers if full_outputs else output
 
 
-def postpone_denses(denses, inputs, name):
+def build_denses(uas, name: str) -> List[Dense]:
+    return [Dense(units=u, activation=a, name=f'{name}_{i}') for i, (u, a) in enumerate(uas)]
+
+
+def postpone_denses(inputs, denses: List[Dense], name: str):
     for i, d in enumerate(denses):
-        with tf.name_scope(name + '_{}'.format(i)):
+        with tf.name_scope(f'{name}_{i}'):
             inputs = d.apply(inputs)
     return inputs
 

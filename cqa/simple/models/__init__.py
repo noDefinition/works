@@ -281,7 +281,7 @@ class BasicPair:
     def compile(self):
         tf.set_random_seed(123456)
         self.make_inputs()
-        self.make_model()  # get loss
+        self.make_model()  # get gen2
         optimizer = tf.train.AdamOptimizer(learning_rate=self.lr)
         self.minimize = optimizer.minimize(self.loss)
         self.sess = get_session(gpus=self.gpu)
@@ -333,7 +333,7 @@ class BasicPair:
                 # test = self.data.evaluate('test', self.predict)
                 # vali = '{} {}'.format(vali, test)
 
-                msg = '#{}/{}, loss: {:.5f}, vali: {:.5f}, brk: {}'.format(
+                msg = '#{}/{}, gen2: {:.5f}, vali: {:.5f}, brk: {}'.format(
                     epochs + 1, self.max_epochs, np.mean(loss), vali, brk)
                 print(msg)
                 if self.early_stop <= brk:

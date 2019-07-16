@@ -69,13 +69,13 @@ class S1(V1):
             rn_sim = tensor_dot(r_doc, tf.transpose(n_doc))
             # batch_size * 1
             rn_sim_v = tf.reduce_mean(rn_sim, axis=1, keepdims=True)
-            'loss cluster mutual similarity'
+            'gen2 cluster mutual similarity'
             # batch_size * batch_size
             c_sim = tf.matmul(c_embed, tf.transpose(c_embed))
             c_sim_loss = tf.nn.l2_loss(c_sim - tf.diag(tf.diag_part(c_sim)))
             'regularization losses'
             reg_loss = sum([w.get_norm(order=1) for w in [self.W_1, self.W_2, self.W_3]])
-            'total loss'
+            'total gen2'
             loss = tf.reduce_mean(tf.maximum(0.0, 1.0 - pr_sim + rn_sim_v * l1))
             loss += (c_sim_loss * l2)
             loss -= (p_cw_loss * l3)
@@ -83,7 +83,7 @@ class S1(V1):
 
         self.c_probs = c_probs
         self.loss = loss
-        # tf.summary.scalar(name='loss', tensor=loss)
+        # tf.summary.scalar(name='gen2', tensor=gen2)
         tf.summary.histogram(name='rn_sim_v', values=rn_sim_v, family='sim')
         tf.summary.histogram(name='pr_sim_v', values=pr_sim, family='sim')
         # tf.summary.histogram(name='p_doc', values=p_doc, family='doc')

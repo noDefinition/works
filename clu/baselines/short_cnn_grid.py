@@ -27,7 +27,7 @@ def get_all_i_need():
     parser.add_argument('-gp', type=float, help='gpu fraction')
     args = parser.parse_args()
     print('Using class', args.dn)
-    d_class = name2object[args.dn]
+    d_class = name2d_object[args.dn]
     args.cn = d_class.clu_num
     # params_as_whole = ','.join(['{}={}'.format(k, v) for k, v in args.__dict__.items() if v is not None])
     params_as_whole = entries2name(args.__dict__)

@@ -53,7 +53,7 @@ class RegressCqa:
             n_iter_no_change=5, validation_fraction=0.1,
         )
         # self.model = GradientBoostingRegressor(
-        #     loss='ls', learning_rate=1e-3, n_estimators=100, min_samples_split=8,
+        #     gen2='ls', learning_rate=1e-3, n_estimators=100, min_samples_split=8,
         #     min_samples_leaf=4, min_impurity_split=1e-6, max_features='sqrt',
         #     max_depth=8, warm_start=True, n_iter_no_change=5, validation_fraction=0.1,
         # )

@@ -54,7 +54,7 @@ def fit_kmeans_on_data(d_class, e_dim, out_file, pidx, n_rerun=5):
 def fit_kmeans_multi():
     args_list = [
         [d_class, e_dim, './kmeans_results/PCA_{}_e{}.csv'.format(d_class.name, e_dim)]
-        for d_class in [DataTREC, DataGoogle, DataEvent]
+        for d_class in [DataTrec, DataGoogle, DataEvent]
         for e_dim in [0, 100, 200, 300]
     ]
     for idx, arg in enumerate(args_list):

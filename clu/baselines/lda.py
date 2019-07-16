@@ -16,8 +16,8 @@ def run_lda(kwargs: dict):
     print(kwargs)
     kwargs_copy = kwargs.copy()
     d_class: Data = name2d_class[kwargs.pop('dname')]
-    matrix, topics = d_class().get_matrix_topics(using='tf')
-    x_new = LDA(**kwargs, n_jobs=1).fit_transform(matrix)
+    tf_matrix, topics = d_class().get_matrix_topics(using='tf')
+    x_new = LDA(**kwargs, n_jobs=1).fit_transform(tf_matrix)
     clusters = np.argmax(x_new, axis=1)
     kwargs_copy.pop('learning_method')
     kwargs_copy.pop('random_state')
@@ -26,29 +26,39 @@ def run_lda(kwargs: dict):
 
 
 def run_lda_using_kwargs(result_file):
-    rerun_num = 2
+    rerun_num = 4
     ratios = np.concatenate([np.arange(0.2, 1, 0.2), np.arange(1, 5.1, 0.5)])
-    common = tu.LY((
-        ('max_iter', [200, ]),
-        ('learning_method', ['batch', ]),
-        ('random_state', [i + 512697 for i in range(rerun_num)]),
-    ))
-    datas = tu.LY((
-        ('dname', [DataTREC.name]),
-        ('doc_topic_prior', [0.1, 0.01]),
-        ('topic_word_prior', [0.1, 0.01]),
-        ('n_components', (ratios * DataTREC.topic_num).astype(np.int32)),
-    ), (
-        ('dname', [DataGoogle.name]),
-        ('doc_topic_prior', [0.1, 0.01]),
-        ('topic_word_prior', [0.1, 0.01]),
-        ('n_components', (ratios * DataGoogle.topic_num).astype(np.int32)),
-    ), (
-        ('dname', [DataEvent.name]),
-        ('doc_topic_prior', [0.1, 0.01]),
-        ('topic_word_prior', [1., 0.1]),
-        ('n_components', (ratios * DataEvent.topic_num).astype(np.int32)),
-    ))
+    common = tu.LY({
+        'max_iter': [200, ],
+        'learning_method': ['batch', ],
+        'random_state': [i + 159867 for i in range(rerun_num)],
+    })
+    datas = tu.LY({
+        'dname': [DataTrec.name],
+        'doc_topic_prior': [0.1, 0.01],
+        'topic_word_prior': [0.1, 0.01],
+        'n_components': (ratios * DataTrec.topic_num).astype(np.int32),
+    }, {
+        'dname': [DataGoogle.name],
+        'doc_topic_prior': [0.1, 0.01],
+        'topic_word_prior': [0.1, 0.01],
+        'n_components': (ratios * DataGoogle.topic_num).astype(np.int32),
+    }, {
+        'dname': [DataEvent.name],
+        'doc_topic_prior': [0.1, 0.01],
+        'topic_word_prior': [1., 0.1],
+        'n_components': (ratios * DataEvent.topic_num).astype(np.int32),
+    }, {
+        'dname': [DataReuters.name],
+        'doc_topic_prior': [0.1, 0.01],
+        'topic_word_prior': [1., 0.1],
+        'n_components': (ratios * DataReuters.topic_num).astype(np.int32),
+    }, {
+        'dname': [Data20ng.name],
+        'doc_topic_prior': [1, 0.1],
+        'topic_word_prior': [1., 0.1, 0.01],
+        'n_components': (ratios * Data20ng.topic_num).astype(np.int32),
+    })
     # nv_list = {
     #     DataTREC: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1, 0.01])],
     #     DataGoogle: [('doc_topic_prior', [0.1, 0.01]), ('topic_word_prior', [0.1, 0.01])],
@@ -65,7 +75,7 @@ def run_lda_using_kwargs(result_file):
     # args_list = [(d_class, g) for g in au.grid_params(nv_list + common)]
     od_list = (common * datas).eval()
     print(len(od_list))
-    res_list = mu.multi_process_batch(run_lda, 19, [(od,) for od in od_list])
+    res_list = mu.multi_process_batch(run_lda, 20, [(od,) for od in od_list])
     print(len(res_list))
     df = pd.DataFrame()
     for idx, (kwargs, scores) in enumerate(res_list):
@@ -144,7 +154,8 @@ if __name__ == '__main__':
 
     pd.set_option('display.max_columns', 500)
     pd.set_option('display.width', 1000)
-    run_lda_using_kwargs('lda_results.csv')
+    print('what lda_results_0707.csv')
+    run_lda_using_kwargs('lda_results_0707.csv')
     exit()
     # one_run_for_word_distribution()
     # exit()

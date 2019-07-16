@@ -4,7 +4,7 @@ from clu.me import *
 
 # noinspection PyAttributeOutsideInit
 class V1:
-    """  multi-word multi-cluster loss (submit version) """
+    """  multi-word multi-cluster gen2 (submit version) """
     file = __file__
 
     def __init__(self, args):
@@ -107,23 +107,23 @@ class V1:
             rn_sim = tensor_dot(r_doc, tf.transpose(n_doc))
             # batch_size * 1
             # rn_sim_v = tf.reduce_mean(rn_sim, axis=1, keepdims=True)
-            'loss cluster mutual similarity'
+            'gen2 cluster mutual similarity'
             # batch_size * batch_size
             # c_sim = tf.matmul(c_embed, tf.transpose(c_embed))
             # c_sim_loss = tf.nn.l2_loss(c_sim - tf.diag(tf.diag_part(c_sim)))
             'regularization losses'
             ws = [self.W_1, self.W_2, self.W_3]
             reg_loss = sum(w.get_norm(order=2, add_bias=False) for w in ws)
-            'total loss'
+            'total gen2'
             pairwise = tf.reduce_mean(tf.maximum(0., self.margin - pr_sim + rn_sim))
             loss = pairwise
-            # loss += (c_sim_loss * l2)
+            # gen2 += (c_sim_loss * l2)
             loss -= (pointwise * l3)
             loss += (reg_loss * l4)
 
         self.pc_probs = c_probs
         self.loss = loss
-        tf.summary.scalar(name='loss', tensor=loss)
+        tf.summary.scalar(name='gen2', tensor=loss)
         tf.summary.histogram(name='rn_sim', values=rn_sim, family='sim')
         tf.summary.histogram(name='pr_sim', values=pr_sim, family='sim')
 

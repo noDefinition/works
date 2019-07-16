@@ -51,14 +51,15 @@ class TrainingInstance(object):
 
     def __str__(self):
         s = ""
-        s += "tokens: %s\n" % (" ".join(
-            [tokenization.printable_text(x) for x in self.tokens]))
-        s += "segment_ids: %s\n" % (" ".join([str(x) for x in self.segment_ids]))
+        s += "tokens: %s\n" % (
+            " ".join([tokenization.printable_text(x) for x in self.tokens]))
+        s += "segment_ids: %s\n" % (
+            " ".join([str(x) for x in self.segment_ids]))
         s += "is_random_next: %s\n" % self.is_random_next
-        s += "masked_lm_positions: %s\n" % (" ".join(
-            [str(x) for x in self.masked_lm_positions]))
-        s += "masked_lm_labels: %s\n" % (" ".join(
-            [tokenization.printable_text(x) for x in self.masked_lm_labels]))
+        s += "masked_lm_positions: %s\n" % (
+            " ".join([str(x) for x in self.masked_lm_positions]))
+        s += "masked_lm_labels: %s\n" % (
+            " ".join([tokenization.printable_text(x) for x in self.masked_lm_labels]))
         s += "\n"
         return s
 
@@ -197,7 +198,6 @@ def create_instances_from_document(
         masked_lm_prob, max_predictions_per_seq, vocab_words, rng):
     """Creates `TrainingInstance`s for a single document."""
     document = all_documents[document_index]
-
     # Account for [CLS], [SEP], [SEP]
     max_num_tokens = max_seq_length - 3
 
@@ -227,8 +227,7 @@ def create_instances_from_document(
         current_length += len(segment)
         if i == len(document) - 1 or current_length >= target_seq_length:
             if current_chunk:
-                # `a_end` is how many segments from `current_chunk` go into the `A`
-                # (first) sentence.
+                # `a_end` is how many segments from `current_chunk` go into the `A`(first) sentence.
                 a_end = 1
                 if len(current_chunk) >= 2:
                     a_end = rng.randint(1, len(current_chunk) - 1)
@@ -236,7 +235,6 @@ def create_instances_from_document(
                 tokens_a = []
                 for j in range(a_end):
                     tokens_a.extend(current_chunk[j])
-
                 tokens_b = []
                 # Random next
                 is_random_next = False
@@ -290,8 +288,7 @@ def create_instances_from_document(
                 tokens.append("[SEP]")
                 segment_ids.append(1)
 
-                (tokens, masked_lm_positions,
-                 masked_lm_labels) = create_masked_lm_predictions(
+                (tokens, masked_lm_positions, masked_lm_labels) = create_masked_lm_predictions(
                     tokens, masked_lm_prob, max_predictions_per_seq, vocab_words, rng)
                 instance = TrainingInstance(
                     tokens=tokens,
@@ -303,18 +300,15 @@ def create_instances_from_document(
             current_chunk = []
             current_length = 0
         i += 1
-
     return instances
 
 
-MaskedLmInstance = collections.namedtuple("MaskedLmInstance",
-                                          ["index", "label"])
+MaskedLmInstance = collections.namedtuple("MaskedLmInstance", ["index", "label"])
 
 
 def create_masked_lm_predictions(tokens, masked_lm_prob,
                                  max_predictions_per_seq, vocab_words, rng):
     """Creates the predictions for the masked LM objective."""
-
     cand_indexes = []
     for (i, token) in enumerate(tokens):
         if token == "[CLS]" or token == "[SEP]":

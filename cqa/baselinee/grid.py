@@ -14,7 +14,7 @@ def get_args():
     _(J.sc, type=float, help='model: scale for normal init')
     _(J.lr, type=float, default=1e-3, help='train: learning rate')
 
-    _(J.dmu_, type=int, help='data multiply for number of pairs')
+    _(J.dmu, type=int, help='data multiply for number of pairs')
     _(J.reg, type=float, default=0., help='coeff of regularization')
     _(J.drp, type=float, default=0., help='probability of dropout')
     return tu.parse_args(parser)

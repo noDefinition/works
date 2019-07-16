@@ -1,3 +1,12 @@
+first_lkup = dict()
+
+
+def print_on_first(key, info: str):
+    if key not in first_lkup:
+        print(info)
+        first_lkup[key] = info
+
+
 def get_logger(log_file_path):
     import logging
     logger = logging.getLogger()

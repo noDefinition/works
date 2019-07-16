@@ -377,7 +377,7 @@ class BasicPair:
 
         self.make_inputs()
         self.emb_ws = set()
-        self._make_model()  # get loss
+        self._make_model()  # get gen2
         opt = tf.train.AdamOptimizer
         if self.args.opt == 'adam':
             opt = tf.train.AdamOptimizer
@@ -408,7 +408,7 @@ class BasicPair:
         '''
         if self.run_summary:
             ws = tf.global_variables('train/.*/emb_w[^/]') + tf.trainable_variables()
-            for g, w in optimizer.compute_gradients(self.loss, ws):
+            for g, w in optimizer.compute_gradients(self.gen2, ws):
                 tf.summary.histogram(w.name, w)
                 if g is not None:
                     tf.summary.histogram('grad/' + w.name, g)
@@ -445,7 +445,7 @@ class BasicPair:
             l2 = self.add_l2()
             if l2 is not None:
                 self.loss += l2
-            # tf.summary.scalar("loss", self.loss)
+            # tf.summary.scalar("gen2", self.gen2)
             self.outputs = p_score
             # tf.summary.scalar("diff_score", tf.reduce_mean(diff_score))
         else:
@@ -454,7 +454,7 @@ class BasicPair:
                 # with tf.variable_scope("train", reuse=tf.AUTO_REUSE):
                 score = self.TopLayer(self.rep(self.inp_a, self.inp_u))
             self.loss = tf.losses.mean_squared_error(self.out_y, score)
-            # self.loss = tf.reduce_mean((self.out_y - score) ** 2)
+            # self.gen2 = tf.reduce_mean((self.out_y - score) ** 2)
             l2 = self.add_l2()
             if l2 is not None:
                 self.loss += l2
@@ -570,7 +570,7 @@ class BasicPair:
                     vali = '{} {}'.format(vali, test)
                     vali_time += test_time
 
-                msg = '#{}/{}, loss: {:.5f}, vali: {}, brk: {}, time: {:.1f}s {:.1f}s'.format(
+                msg = '#{}/{}, gen2: {:.5f}, vali: {}, brk: {}, time: {:.1f}s {:.1f}s'.format(
                     epochs + 1, self.max_epochs, np.mean(loss), vali, brk, train_time, vali_time)
                 log(msg, i=-1, red=(brk == 0))
                 if self.early_stop > 0 and brk >= self.early_stop:

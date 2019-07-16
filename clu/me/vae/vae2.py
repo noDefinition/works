@@ -3,61 +3,108 @@ from clu.me.vae.vae1 import *
 
 # noinspection PyAttributeOutsideInit
 class VAE2(VAE1):
+    # reconstruct tf-idf
+
+    def get_hyper_params(self, args):
+        super(VAE2, self).get_hyper_params(args)
+        self.reg_mu: bool = bool(args[C.regmu])  # 0:no reg 1:reg
+
     def define_weight_params(self):
-        super(VAE2, self).define_weight_params()
         self.encode_lstm = CuDNNLSTM(self.dim_h, return_sequences=True)
 
-    def get_lstm_encode(self, inputs, mask, name):
-        assert len(mask.shape) == 2
+    def define_inputs(self):
+        super(VAE2, self).define_inputs()
+        self.ph_tfidf = tf.placeholder(f32, (None, None), name='p_tfidf')  # (bs, nw)
+
+    # def get_lstm_encode(self, inputs, mask, name):
+    #     assert len(mask.shape) == 2
+    #     encode_outputs = self.encode_lstm(inputs)  # (bs, tn, hd)
+    #     with tf.name_scope(name):
+    #         mask = tf.cast(mask, i32)  # (bs, tn)
+    #         b_seq_len = tf.reduce_sum(mask, axis=1, keepdims=True)  # (bs, 1)
+    #         output_slices = tf.batch_gather(encode_outputs, b_seq_len)  # (bs, 1, hd)
+    #         output_slices = tf.squeeze(output_slices, axis=1)  # (bs, hd)
+    #     return output_slices
+
+    def get_mean_pooling(self, inputs, mask, name: str):
         with tf.name_scope(name):
-            encode_outputs = self.encode_lstm(inputs)  # (bs, tn, hd)
-            mask = tf.cast(mask, i32)  # (bs, tn)
-            b_seq_len = tf.reduce_sum(mask, axis=1, keepdims=True)  # (bs, 1)
-            output_slices = tf.batch_gather(encode_outputs, b_seq_len)  # (bs, 1, hd)
-            output_slices = tf.squeeze(output_slices, axis=1)  # (bs, hd)
-        return output_slices
+            doc_len = tf.reduce_sum(mask, axis=1, keepdims=True)  # (bs, 1)
+            # doc_len = tf.maximum(doc_len, tf.ones_like(doc_len))
+            doc_emb = tf.reduce_sum(inputs, axis=1) / doc_len  # (bs, dw)
+        return doc_emb  # (bs, dw)
+
+    def get_pc_probs_softmax(self, doc_emb, clu_emb, name: str):
+        with tf.name_scope(name):
+            pc_score = tf.matmul(doc_emb, clu_emb, transpose_b=True, name='pc_score')  # (bs, cn)
+            pc_probs = tf.nn.softmax(pc_score, axis=1, name='pc_probs')  # (bs, cn)
+        return pc_probs
+
+    def cos_sim(self, a, b, name: str, axis: int = -1):
+        with tf.name_scope(name):
+            a = tf.nn.l2_normalize(a, axis=axis)
+            b = tf.nn.l2_normalize(b, axis=axis)
+            dot = tf.reduce_sum(a * b, axis=axis)
+        return dot
 
     def forward(self):
-        p_rep = self.get_lstm_encode(self.p_lkup, self.p_mask, name='p_rep')  # (bs, dw)
-        pc_score = tf.matmul(p_rep, self.c_embed, transpose_b=True, name='pc_score')  # (bs, cn)
-        pc_probs = tf.nn.softmax(pc_score, axis=1, name='pc_probs')  # (bs, cn)
-        pc_recon = tf.matmul(pc_probs, self.c_embed, name='pc_recon')  # (bs, dw)
-        back_stdvar = tf.exp(self.c_logvar * 0.5, name='back_stdvar')  # (bs, dw)
-        pc_stdvar = tf.matmul(pc_probs, back_stdvar, name='pc_stdvar')  # (bs, dw)
-        z_p = self.sample_z(pc_recon, pc_stdvar, name='z_p')  # (bs, ed)
-        z_p_d = instant_denses(z_p, [(self.dim_h, None)], name='z_p_dense')  # (bs, hd)
+        # p_rep = self.get_lstm_encode(self.p_lkup, self.p_mask, name='p_rep')  # (bs, dw)
+        p_rep = self.get_mean_pooling(self.p_lkup, None, name='p_rep')  # (bs, dw)
+        pc_probs = self.get_pc_probs_softmax(p_rep, self.c_embed, name='pc_probs')  # (bs, cn)
+        z_mu = tf.matmul(pc_probs, self.c_embed, name='z_mu')  # (bs, dw)
+        # stdvar = tf.exp(self.c_logvar * 0.5, name='stdvar')  # (bs, dw)
+        uas = [(self.dim_c, tanh), (self.dim_c, None)]
+        z_logvar = instant_denses(p_rep, uas, 'z_logvar')  # (bs, dw)
+        z_std = tf.exp(z_logvar * 0.5, name='z_std')  # (bs, dw)
+        z_sample = self.sample_z(z_mu, z_std, name='z_sample')  # (bs, dw)
 
-        decoder_outputs, _, _ = self.decode_lstm(
-            self.p_lkup, initial_state=[z_p_d, z_p_d], training=self.ph_is_train)
-        uas = [(self.dim_h, tanh), (self.num_w, None)]
-        decode_preds = instant_denses(decoder_outputs, uas, 'decode_preds')  # (bs, tn, nw)
+        uas = [(self.dim_h, relu), (self.num_w, None)]
+        decode_tfidf = instant_denses(z_sample, uas, 'decode_tfidf')  # (bs, nw)
+        decode_cos_sim = self.cos_sim(self.ph_tfidf, decode_tfidf, name='decode_cos_sim')
+        # recon_cos_sim = tf.reduce_mean(decode_cos_sim, name='recon_cos_sim')
 
-        p_shift_hot = tf.one_hot(
-            indices=self.p_shift, depth=self.num_w, name='p_shift_hot',
-            on_value=self.smooth, off_value=(1 - self.smooth) / (self.num_w - 1))  # (bs, tn, nw)
-        right_cross_ent = tf.nn.softmax_cross_entropy_with_logits_v2(
-            labels=p_shift_hot, logits=decode_preds, name='cross_entropy')  # (bs, tn)
-        right_cross_ent = tf.multiply(right_cross_ent, self.p_shift_mask, name='cross_entropy_mask')
+        decode_shift = tf.concat([decode_tfidf[2:, :], decode_tfidf[:2, :]], axis=0)
+        shift_cos_sim = self.cos_sim(self.ph_tfidf, decode_shift, name='shift_cos_sim')
+        # wrong_cos_sim = tf.reduce_mean(shift_cos_sim, name='wrong_cos_sim')
 
-        cross_loss = tf.reduce_mean(right_cross_ent, name='cross_loss')
-        z_prior_kl = self.get_normal_kl(pc_recon, pc_stdvar, name='z_prior_kl') * self.coeff_kl
-        self.total_loss = tf.add_n([cross_loss, z_prior_kl], name='total_loss')
+        margin = tf.maximum(0., 1. - decode_cos_sim + shift_cos_sim, name='pairwise_margin')
+        margin_loss = tf.reduce_mean(margin, name='margin_loss')
+        z_prior_kl = self.get_normal_kl(z_mu, z_std, reg_mu=self.reg_mu, name='z_prior_kl')
+        self.train_loss = tf.add_n([
+            margin_loss,
+            z_prior_kl * self.coeff_kl if self.coeff_kl > 1e-5 else 0.,
+        ], name='total_loss')
 
-        # self.z_p = z_p
-        # self.z_p_d = z_p_d
         self.pc_probs = pc_probs
-        self.decode_preds = decode_preds
-
-        zp_hist = histogram(name='z_p', values=z_p, family='z')
-        zpd_hist = histogram(name='z_p_d', values=z_p_d, family='z')
-        pc_prob_hist = histogram(name='pc_probs', values=pc_probs, family='clu')
-        pc_recon_hist = histogram(name='pc_recon', values=pc_recon, family='clu')
-        pc_logvar_hist = histogram(name='pc_stdvar', values=pc_stdvar, family='clu')
-        dp_hist = histogram(name='decode_preds', values=decode_preds, family='decode')
-        loss_hist = scalar(name='cross_loss', tensor=cross_loss, family='loss')
-        kl_hist = scalar(name='z_prior_kl', tensor=z_prior_kl, family='loss')
-        tot_hist = scalar(name='total_loss', tensor=self.total_loss, family='loss')
-        self.merge_loss = su.merge([loss_hist, kl_hist, tot_hist])
         self.merge_mid = su.merge([
-            zp_hist, zpd_hist, dp_hist, pc_prob_hist, pc_recon_hist, pc_logvar_hist,
+            histogram(name='pc_probs', values=pc_probs, family='clu'),
+            histogram(name='z_mu', values=z_mu, family='sample'),
+            histogram(name='z_std', values=z_std, family='sample'),
+            histogram(name='z_sample', values=z_sample, family='sample'),
+            histogram(name='decode_tfidf', values=decode_tfidf, family='decode'),
+            histogram(name='decode_cos_sim', values=decode_cos_sim, family='decode'),
+            histogram(name='shift_cos_sim', values=shift_cos_sim, family='decode'),
+            histogram(name='margin', values=margin, family='decode'),
         ])
+        self.merge_loss = su.merge([
+            scalar(name='z_prior_kl', tensor=z_prior_kl, family='gen2'),
+            scalar(name='margin_loss', tensor=margin_loss, family='gen2'),
+            scalar(name='total_loss', tensor=self.train_loss, family='gen2'),
+        ])
+
+    """ runtime """
+
+    def get_fd(self, docarr: List[Document], is_train: bool, **kwargs):
+        from scipy.sparse import vstack
+        p_seq = [doc.tokenids for doc in docarr]
+        fd = {self.p_wids: p_seq, self.ph_is_train: is_train}
+        # with_tfidf = kwargs.get('with_tfidf', True)
+        # if with_tfidf:
+        p_tfidf_list = [doc.tfidf for doc in docarr]
+        p_tfidf = vstack(p_tfidf_list).todense()
+        fd[self.ph_tfidf] = p_tfidf
+        return fd
+
+    def predict(self, docarr: List[Document]) -> List[int]:
+        fd = self.get_fd(docarr, is_train=False, with_tfidf=False)
+        pc_probs = self.sess.run(self.pc_probs, feed_dict=fd)
+        return np.argmax(pc_probs, axis=1).reshape(-1)

@@ -126,7 +126,7 @@ class LR(BasicPair):
                     vali = '{} {}'.format(vali, test)
                     vali_time += test_time
 
-                msg = '#{}/{}, loss: {:.5f}, vali: {}, brk: {}, time: {:.1f}s {:.1f}s'.format(
+                msg = '#{}/{}, gen2: {:.5f}, vali: {}, brk: {}, time: {:.1f}s {:.1f}s'.format(
                         epochs + 1, self.max_epochs, np.mean(loss), vali, brk, train_time, vali_time)
                 log(msg, i = -1, red = (brk == 0))
                 if self.early_stop > 0 and brk >= self.early_stop:

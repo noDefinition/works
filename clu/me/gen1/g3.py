@@ -3,7 +3,7 @@ from me.gen1.g1 import *
 
 # noinspection PyAttributeOutsideInit,PyMethodMayBeStatic,PyPep8Naming
 class G3(G1):
-    """ 对抗进入pairwise loss，同样区分正例与重构 """
+    """ 对抗进入pairwise gen2，同样区分正例与重构 """
     file = __file__
     
     def define_denses(self):
@@ -56,7 +56,7 @@ class G3(G1):
             pn_sim_D_v = tf.reduce_mean(pn_sim_D, axis=1, keepdims=True)
             # rn_sim_D = tensor_dot(r_Dn, tf.transpose(n_Dn))
             # rn_sim_D_v = tf.reduce_mean(rn_sim_D, axis=1, keepdims=True)
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 loss_D = tf.reduce_mean(pr_sim_D - pn_sim_D_v)
         with tf.name_scope('generate'):
             # batch_size * 1
@@ -70,7 +70,7 @@ class G3(G1):
             c_embed = l2_norm_tensors(c)
             c_sim = tf.matmul(c_embed, tf.transpose(c_embed))
             c_sim_loss = tf.nn.l2_loss(c_sim - tf.diag(tf.diag_part(c_sim)))
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 c_sim_loss = c_sim_loss * l2
                 reg_G = sum([d.get_norm(order=2) for d in self.W_doc]) * l4
                 loss_G_pre = reg_G + c_sim_loss + tf.reduce_mean(

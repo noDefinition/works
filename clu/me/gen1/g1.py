@@ -64,7 +64,7 @@ class G1(V1):
             D_pr_sim = inner_dot(D_pn, D_rn)
             # pr_score_D = self.D_dis_3(tf.nn.sigmoid(D_p + D_r))
             # D_pr_sim = tf.nn.tanh(pr_score_D)
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 loss_D = tf.reduce_mean(D_pr_sim)
 
         with tf.name_scope('generate'):
@@ -76,7 +76,7 @@ class G1(V1):
             # G_rn_sim = tensor_dot(r_norm, tf.transpose(n_norm))
             # G_rn_sim_v = tf.reduce_mean(G_rn_sim, axis=1, keepdims=True)
             hinge = tf.maximum(0., margin - G_pr_sim + G_pn_sim_v * l1)
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 reg_G = sum([d.get_norm(order=2) for d in self.W_doc]) * l4
                 loss_G_pre = tf.reduce_mean(hinge) + reg_G
                 loss_G = loss_G_pre - loss_D * l3

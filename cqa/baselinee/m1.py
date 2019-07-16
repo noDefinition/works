@@ -135,7 +135,7 @@ class P1:
         fd = self.get_fd(None, a0, u0, None, a1, u1)
         fd[self.is_train] = True
         _, loss = self.sess.run([self.minimize, self.loss], feed_dict=fd)
-        return {'loss', loss}
+        return {'gen2', loss}
 
     ''' *********************************** funcs begin ***********************************'''
 

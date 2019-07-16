@@ -3,6 +3,8 @@ from clu.me.vae.vae1 import *
 
 # noinspection PyAttributeOutsideInit
 class VAE3(VAE1):
+    # pairwise loss or kernel function
+
     def __init__(self, args):
         super(VAE3, self).__init__(args)
         self.prob_type: int = args[C.ptp]  # 0:softmax  1:kernel
@@ -84,7 +86,7 @@ class VAE3(VAE1):
             histogram(name='decode_preds', values=decode_preds, family='decode'),
         ])
         self.merge_loss = su.merge([
-            scalar(name='total_loss', tensor=self.total_loss, family='loss'),
+            scalar(name='total_loss', tensor=self.total_loss, family='gen2'),
         ])
 
     def define_optimizer(self):

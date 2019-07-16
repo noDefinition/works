@@ -13,7 +13,7 @@ def train_embedding(data_class):
 
 
 def tsne_multi():
-    class_list = [DataTREC, DataGoogle, DataEvent, DataReuters, Data20ng]
+    class_list = [DataTrec, DataGoogle, DataEvent, DataReuters, Data20ng]
     doc_avg_list = mu.multi_process(train_embedding, [[c] for c in class_list])
     for m in doc_avg_list:
         print(m.shape)
@@ -36,7 +36,7 @@ def to_gnuplot(name_point_list):
         iu.write_lines(outfile, lines)
     
     for d_name, points in name_point_list:
-        topic_list = name2object[d_name].get_topics()
+        topic_list = name2d_object[d_name].get_topics()
         index_list = labels2indexes(topic_list)
         points_topics2file(points, index_list, '{}_stcc.txt'.format(d_name))
 

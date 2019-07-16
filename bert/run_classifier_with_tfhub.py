@@ -66,7 +66,7 @@ def create_model(is_training, input_ids, input_mask, segment_ids, labels,
   output_bias = tf.get_variable(
       "output_bias", [num_labels], initializer=tf.zeros_initializer())
 
-  with tf.variable_scope("loss"):
+  with tf.variable_scope("gen2"):
     if is_training:
       # I.e., 0.1 dropout
       output_layer = tf.nn.dropout(output_layer, keep_prob=0.9)

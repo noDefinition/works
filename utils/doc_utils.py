@@ -1,6 +1,10 @@
 from collections import Counter, OrderedDict as Od
 
 import numpy as np
+from scipy.sparse import vstack
+from scipy.sparse.csr import csr_matrix
+from sklearn import preprocessing
+from sklearn.feature_extraction.text import TfidfTransformer
 
 import utils.io_utils as iu
 import utils.pattern_utils as pu
@@ -15,10 +19,11 @@ class Document:
 
     def clear(self):
         self.docid = self.topic = None
-        self.text: str = None
-        self.tokens: List[str] = None
-        self.tokenids: List[int] = None
+        self.text: str = ''
+        self.tokens: List[str] = list()
+        self.tokenids: List[int] = list()
         self.pos_fill = self.neg_fill = self.tf = self.tfidf = None
+        'tfidf will be sparse from 190711, and getting tfidf matrix may need transform / vstack'
 
     def set(self, docid, topic, text):
         self.docid, self.topic, self.text = docid, topic, text
@@ -49,35 +54,33 @@ def make_docarr(args_list) -> List[Document]:
 
 
 def docarr_fit_tf(word2vec: dict, docarr):
-    v_size = len(word2vec)
-    for d in docarr:
-        if d.tf is None:
-            v = np.zeros(v_size, dtype=np.int32)
-            for wid in d.tokenids:
-                v[wid] += 1
-            d.tf = v
+    v_size = len(word2vec) + 1
+    for doc in docarr:
+        if doc.tf is None:
+            tf = np.zeros(v_size, dtype=np.int32)
+            for wid in doc.tokenids:
+                tf[wid] += 1
+            doc.tf = csr_matrix(tf)
     print('tf transform over')
     return docarr
 
 
-def docarr_fit_tfidf(word2vec: dict, docarr):
-    from sklearn import preprocessing
-    from sklearn.feature_extraction.text import TfidfTransformer
-
+def docarr_fit_tfidf(word2vec: dict, docarr: List[Document]):
     transformer = TfidfTransformer(norm='l2', sublinear_tf=True)
-    tf = [d.tf for d in docarr_fit_tf(word2vec, docarr)]
+    docarr = docarr_fit_tf(word2vec, docarr)
+    tf_list = [d.tf for d in docarr]
+    tf = vstack(tf_list)
     tfidf = transformer.fit_transform(tf)
-    tfidf = tfidf.todense() * np.sqrt(tfidf.shape[1])
+    tfidf = tfidf * np.sqrt(tfidf.shape[1])
     tfidf = preprocessing.normalize(tfidf, norm='l2') * 200
     tfidf = tfidf.astype(np.float32)
     for d, v in zip(docarr, tfidf):
-        if d.tfidf is None:
-            d.tfidf = v
+        d.tfidf = v
     print('tfidf transform over')
     return docarr
 
 
-def tokenize_docarr(docarr, stemming: bool):
+def tokenize_docarr(docarr: List[Document], stemming: bool):
     stem_func = pu.stemming if stemming else None
     for doc in docarr:
         doc.tokens = pu.tokenize(doc.text.lower().strip(), pu.tokenize_pattern)
@@ -86,11 +89,11 @@ def tokenize_docarr(docarr, stemming: bool):
     return docarr
 
 
-def validate_tokens(tokens, w_verify_func):
+def validate_tokens(tokens: List[str], w_verify_func):
     return [t for t in tokens if w_verify_func(t)]
 
 
-def get_ifd_from_docarr(docarr):
+def get_ifd_from_docarr(docarr: List[Document]):
     """ assume that docarr has been tokenized """
     ifd = IdFreqDict()
     for doc in docarr:
@@ -99,7 +102,7 @@ def get_ifd_from_docarr(docarr):
     return ifd
 
 
-def validate_docarr_by_ifd(docarr, ifd):
+def validate_docarr_by_ifd(docarr: List[Document], ifd):
     for d in docarr:
         d.tokens = [w for w in d.tokens if w in ifd]
         d.tokenids = [ifd.word2id(w) for w in d.tokens]
@@ -114,7 +117,7 @@ def docarr_bootstrap_ifd(docarr, wf_flt_func):
     return docarr, ifd
 
 
-def filter_docarr(docarr, doc_filter_func):
+def filter_docarr(docarr: List[Document], doc_filter_func):
     if doc_filter_func is None:
         return docarr
     return [d for d in docarr if doc_filter_func(d)]
@@ -131,7 +134,7 @@ def filter_docarr(docarr, doc_filter_func):
     # return docarr
 
 
-def filter_docarr_by_topic(docarr, topic_filter_func):
+def filter_docarr_by_topic(docarr: List[Document], topic_filter_func):
     topics = [d.topic for d in docarr]
     accept_topics, reject_topics = Counter(), Counter()
     for rank, (topic, freq) in enumerate(Counter(topics).most_common()):

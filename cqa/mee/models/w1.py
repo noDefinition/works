@@ -63,7 +63,7 @@ class W1(V1):
         for g, v in opt.compute_gradients(self.margin_loss):
             if 'gen_' in v.name and g is not None:
                 print(v.name, 'is generator to min margin')
-                gvs_gen.append((-g, v))  # gen should make margin loss larger
+                gvs_gen.append((-g, v))  # gen should make margin gen2 larger
 
         print('len dis:{}, len gen:{}'.format(len(gvs_dis), len(gvs_gen)))
         self.train_dis = opt.apply_gradients(gvs_dis, name='train_dis')
@@ -75,7 +75,7 @@ class W1(V1):
     def get_loss(self, qwid, awids, uints, votes):
         fd = self.get_fd(qwid, awids, uints, votes)
         losses = self.sess.run([self.margin_loss, self.reg_loss, self.total_loss], feed_dict=fd)
-        return dict(zip(['margin loss', 'reg loss', 'total loss'], losses))
+        return dict(zip(['margin gen2', 'reg gen2', 'total gen2'], losses))
 
     def train_step(self, qwid, awids, uints, votes, *args, **kwargs):
         fd = self.get_fd(qwid, awids, uints, votes)

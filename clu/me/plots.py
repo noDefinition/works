@@ -144,7 +144,3 @@ def plot_max_c_probs():
         except Exception as e:
             print(e)
 
-
-if __name__ == '__main__':
-    # np.random.randint(low=)
-    pass

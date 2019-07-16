@@ -38,14 +38,14 @@ class N2(N1):
         with tf.name_scope('similarity'):
             pc_probs, Pr = self.get_probs_and_recon(Pd, c, 'reconstruct_p')
             nc_probs, Nr = self.get_probs_and_recon(Nd, c, 'reconstruct_n')
-            with tf.name_scope('loss'):
+            with tf.name_scope('gen2'):
                 Pd_l2, Pr_l2, Nd_l2, Nr_l2 = l2_norm_tensors(Pd, Pr, Nd, Nr)
                 PdPr_sim = inner_dot(Pd_l2, Pr_l2, keepdims=True)
                 PdNd_sim = tf.matmul(Pd_l2, tf.transpose(Nd_l2))
                 PdNd_sim_v = tf.reduce_mean(PdNd_sim, axis=1, keepdims=True)
                 # PdPr_PdNd_mgn = tf.maximum(0.0, 1.0 - PdPr_sim + PdNd_sim_v * l1)
                 PdPr_PdNd_mgn = - PdPr_sim + PdNd_sim_v * l1
-                """merge loss"""
+                """merge gen2"""
                 mgn_loss = tf.reduce_mean(PdPr_PdNd_mgn)
                 sim_reward = tf.reduce_mean(PdPr_sim)
                 reg_loss = sum(w.get_norm(order=2) for w in self.W_doc)

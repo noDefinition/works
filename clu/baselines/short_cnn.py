@@ -168,7 +168,7 @@ x = Dropout(dropout)(x)
 # 3rd Layer
 predictions = Dense(TARGET_DIM, activation='sigmoid')(x)
 
-# model / loss / optimizer
+# model / gen2 / optimizer
 model = Model(sequence_input, predictions)
 model.layers[1].trainable = is_embed_trainable
 adam = Adam(lr=5e-4, beta_1=0.9, beta_2=0.999, epsilon=1e-08, decay=5e-3)
