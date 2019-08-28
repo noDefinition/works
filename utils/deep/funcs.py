@@ -3,6 +3,7 @@ import tensorflow as tf
 import tensorflow.summary as su
 from tensorflow.summary import histogram, scalar
 from tensorflow.keras.layers import Dense
+# from tensorflow.layers import Dense
 
 i16 = tf.int16
 i32 = tf.int32
@@ -22,7 +23,7 @@ softmax = tf.nn.softmax
 
 
 def instant_denses(inputs, uas, name: str, use_bias: bool = True,
-                   w_init=None, w_reg=None, full_outputs: bool = False):
+                   w_init=None, w_reg=None, output_seq: bool = False):
     output = inputs
     layers = list()
     for i, (u, a) in enumerate(uas):
@@ -31,7 +32,7 @@ def instant_denses(inputs, uas, name: str, use_bias: bool = True,
             use_bias=use_bias, kernel_initializer=w_init, kernel_regularizer=w_reg,
         )
         layers.append(output)
-    return layers if full_outputs else output
+    return layers if output_seq else output
 
 
 def build_denses(uas, name: str) -> List[Dense]:

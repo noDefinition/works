@@ -23,7 +23,7 @@ class Document:
         self.tokens: List[str] = list()
         self.tokenids: List[int] = list()
         self.pos_fill = self.neg_fill = self.tf = self.tfidf = None
-        'tfidf will be sparse from 190711, and getting tfidf matrix may need transform / vstack'
+        'tfidf will be sparse from 190711, and getting tfidf matrix need transform / vstack'
 
     def set(self, docid, topic, text):
         self.docid, self.topic, self.text = docid, topic, text
@@ -53,14 +53,13 @@ def make_docarr(args_list) -> List[Document]:
     return [Document().set(*arg) for arg in args_list]
 
 
-def docarr_fit_tf(word2vec: dict, docarr):
+def docarr_fit_tf(word2vec: dict, docarr: List[Document]):
     v_size = len(word2vec) + 1
     for doc in docarr:
-        if doc.tf is None:
-            tf = np.zeros(v_size, dtype=np.int32)
-            for wid in doc.tokenids:
-                tf[wid] += 1
-            doc.tf = csr_matrix(tf)
+        tf = np.zeros(v_size, dtype=np.int32)
+        for wid in doc.tokenids:
+            tf[wid] += 1
+        doc.tf = csr_matrix(tf)
     print('tf transform over')
     return docarr
 
@@ -68,16 +67,27 @@ def docarr_fit_tf(word2vec: dict, docarr):
 def docarr_fit_tfidf(word2vec: dict, docarr: List[Document]):
     transformer = TfidfTransformer(norm='l2', sublinear_tf=True)
     docarr = docarr_fit_tf(word2vec, docarr)
-    tf_list = [d.tf for d in docarr]
-    tf = vstack(tf_list)
+    tf = vstack([d.tf for d in docarr])
     tfidf = transformer.fit_transform(tf)
     tfidf = tfidf * np.sqrt(tfidf.shape[1])
-    tfidf = preprocessing.normalize(tfidf, norm='l2') * 200
+    tfidf = preprocessing.normalize(tfidf, norm='l2') * 10
     tfidf = tfidf.astype(np.float32)
     for d, v in zip(docarr, tfidf):
         d.tfidf = v
     print('tfidf transform over')
     return docarr
+
+
+def get_tf(docarr: List[Document]):
+    tf_list = [doc.tf for doc in docarr]
+    assert None not in tf_list
+    return vstack(tf_list).todense()
+
+
+def get_tfidf(docarr: List[Document]):
+    tfidf_list = [doc.tfidf for doc in docarr]
+    assert None not in tfidf_list
+    return vstack(tfidf_list).todense()
 
 
 def tokenize_docarr(docarr: List[Document], stemming: bool):

@@ -12,9 +12,10 @@ def fit_kmeans(x, clu_num, n_init=10, max_iter=300, n_jobs=4):
 
 
 def fit_kmeans_on_data(d_class, e_dim, out_file, pidx, n_rerun=5):
+    np.concatenate()
     d_obj: Data = d_class()
-    tf, topics = d_obj.get_matrix_topics(using='tf')
-    tfidf, _ = d_obj.get_matrix_topics(using='tfidf')
+    tf, topics = d_obj.get_matrix(mtype='tf')
+    tfidf, _ = d_obj.get_matrix(mtype='tfidf')
     # print('<%d>' % pidx, 'tfidf over')
     if e_dim > 0:
         tf = ru.fit_pca(tf, e_dim)

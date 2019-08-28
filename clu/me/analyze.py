@@ -119,9 +119,9 @@ class Analyze(object):
         return parser.parse_args()
 
     def get_log_path(self):
-        new_paths = iu.list_children('./', iu.DIR, r'^log\d', True)
-        old_paths = iu.list_children('./logs', iu.DIR, r'^log\d', True)
-        log_paths = new_paths + old_paths
+        new_paths = iu.list_children('./', iu.DIR, r'(log)?\d+', True)
+        old_paths = iu.list_children('./logs', iu.DIR, r'^(log)?\d+', True)
+        log_paths = (new_paths + old_paths)
         log_path = iu.choose_from(log_paths) if self.choose_log else iu.most_recent(log_paths)
         print('logging path:', log_path)
         return log_path

@@ -9,8 +9,7 @@ import collections
 import json
 import re
 
-from . import modeling
-from . import tokenization
+from bert.tensorflow import tokenization, modeling
 import tensorflow as tf
 
 flags = tf.flags

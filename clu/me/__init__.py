@@ -10,7 +10,6 @@ class CluArgs(Args):
         self.ns = self.add_arg('ns', type=int, help='neg batch num')
         self.sc = self.add_arg('sc', type=float, help='scale for normal init')
         self.lr = self.add_arg('lr', type=float, help='learning rate')
-        self.sql = self.add_arg('sql', type=int, help='length of the tokens in sequences')
         self.pad = self.add_arg('pad', type=int, help='if pad sequences')
 
         self.ed = self.add_arg('ed', type=int, help='embed dim')
@@ -23,10 +22,9 @@ class CluArgs(Args):
         self.l4 = self.add_arg('l4', type=float, help='lambda for regularization gen2')
 
         self.ptn = self.add_arg('ptn', type=int, help='epoch num for pre-training')
-        self.ptncmb = self.add_arg('ptncmb', type=int, help='pretrain combination')
-        # self.worc = self.add_arg('worc', type=int, help='0:word noise, 1: embed noise')
-        # self.eps = self.add_arg('eps', type=float, help='epsilon for adv grad')
-        # self.tpk = self.add_arg('tpk', type=int, help='top k for word feature')
+        self.worc = self.add_arg('worc', type=int, help='0:word noise, 1: embed noise')
+        self.eps = self.add_arg('eps', type=float, help='epsilon for adv grad')
+        self.tpk = self.add_arg('tpk', type=int, help='top k for word feature')
 
         self.drp = self.add_arg('drp', type=float, help='dropout keep prob')
         self.mgn = self.add_arg('mgn', type=float, help='margin in hinge gen2')
@@ -38,20 +36,28 @@ class CluArgs(Args):
         self.bn = self.add_arg('bn', type=int, help='if use batch normalization')
         self.wtrn = self.add_arg('wtrn', type=int, help='if train word embedding')
         self.ctrn = self.add_arg('ctrn', type=int, help='if train cluster embedding')
-        self.wini = self.add_arg('wini', type=int, help='word embed 0:random, 1:pre-trained')
-        self.cini = self.add_arg('cini', type=int, help='cluster embed 0:random, 1:pre-trained')
+        self.wini = self.add_arg(
+            'wini', type=int, default=1, help='word embed 0:random, 1:pre-trained')
+        self.cini = self.add_arg(
+            'cini', type=int, default=1, help='cluster embed 0:random, 1:pre-trained')
 
         """ sbx """
         self.useb = self.add_arg('useb', type=int, help='if use bias in denses')
         self.creg = self.add_arg('creg', type=float, help='coefficient of regularization')
+
+        """ notations """
         self.alpha = self.add_arg('alpha', type=float, help='hyper-param: alpha')
-        self.span = self.add_arg('span', type=float, help='span of changing alpha')
+        self.gamma = self.add_arg('gamma', type=float, help='hyper-param: gamma')
+        self.beta = self.add_arg('beta', type=float, help='hyper-param: beta')
+        # self.span = self.add_arg('span', type=float, help='span of changing alpha')
+
         """ spectral """
         self.sigma = self.add_arg('sigma', type=float, help='sigma of kernel')
         self.cspec = self.add_arg('cspec', type=float, help='coeff of spectral loss')
         self.cdecd = self.add_arg('cdecd', type=float, help='coeff of decode loss')
         self.cencd = self.add_arg('cencd', type=float, help='coeff of encode loss')
         self.cpurt = self.add_arg('cpurt', type=float, help='coeff of purity loss')
+        self.ptncmb = self.add_arg('ptncmb', type=int, help='pretrain combination')
 
 
 C = CluArgs()

@@ -45,6 +45,7 @@ def fit_multi(func, xs, kwargs_list=None):
     res_list = mu.multi_process(func, [(x,) for x in xs], kwargs_list)
     return res_list
 
+
 # if __name__ == '__main__':
 #     a = np.random.normal(size=[33, 40])
 #     b = np.random.normal(size=[44, 40])

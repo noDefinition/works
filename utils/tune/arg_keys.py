@@ -13,7 +13,15 @@ class Args:
         return parser
 
     def parse_args(self):
-        return dict(self.parser.parse_args().__dict__)
+        for k, v in self.parser.parse_args().__dict__.items():
+            setattr(self, k, v)
+        delattr(self, 'parser')
+        return self
+
+    def clear_args(self):
+        for k, v in list(self.__dict__.items()):
+            if v is None:
+                delattr(self, k)
 
     def add_arg(self, name, *args, **kwargs):
         self.parser.add_argument(name, *args, **kwargs)

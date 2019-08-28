@@ -2,6 +2,8 @@ from collections import Counter
 from typing import List, Dict
 
 import numpy as np
+from scipy.sparse import vstack
+
 from utils import au, du, iu, pu, mu
 from utils.doc_utils import Document
 
@@ -22,50 +24,53 @@ class Data:
         # fill([self.name + s for s in ['_clu_init_300.npy', '_word2vec_300.npy']])
         self.support_dims = [16, 32, 64, 128, 256, 300]
         self.support_ratios = list(np.arange(1, 6) / 5) + list(np.arange(2, 6))
-        self.word2wid_file = self.fill_new(self.name + '_word2wid.txt')
-        self.new_docarr_file = self.fill_new(self.name + '_docarr.txt')
-        # self.docarr = self.word2wid = None
+        self.word2wid_file = self.fill(self.name + '_word2wid.txt')
+        self.docarr_file = self.fill(self.name + '_docarr.txt')
 
     def __call__(self, *args, **kwargs):
         return self
 
-    # def fill(self, files):
-    #     base = '/home/cdong/works/clu/data/input_and_outputs/short_text_corpus'
-    #     if isinstance(files, list):
-    #         return [iu.join(base, self.name, f) for f in files]
-    #     elif isinstance(files, str):
-    #         return iu.join(base, self.name, files)
-    #     else:
-    #         raise ValueError('wtf')
-
-    def fill_new(self, files):
+    def fill(self, files):
+        # base = '/home/cdong/works/clu/data/input_and_outputs/short_text_corpus'
         base = '/home/cdong/works/clu/data/corpus'
         if isinstance(files, list):
             return [iu.join(base, self.name, f) for f in files]
         elif isinstance(files, str):
             return iu.join(base, self.name, files)
-        else:
-            raise ValueError('wtf')
 
     def get_docarr_file(self):
-        return self.new_docarr_file
+        return self.docarr_file
 
     def get_word2wid_file(self):
         return self.word2wid_file
 
+    def load_docarr(self) -> List[Document]:
+        return du.load_docarr(self.get_docarr_file())
+
+    def load_word2wid(self) -> Dict[str, int]:
+        return iu.load_json(self.get_word2wid_file())
+
     def get_word2vec_file(self, embed_dim: int, required=True) -> str:
         assert embed_dim in self.support_dims
-        file = self.fill_new(self.name + '_word2vec_{}.pkl'.format(embed_dim))
+        file = self.fill(self.name + '_word2vec_{}.pkl'.format(embed_dim))
         if required and not iu.exists(file):
             raise ValueError('%s does not exist, embedding may have not been trained' % file)
         return file
 
     def get_clu_init_file(self, embed_dim: int, topic_ratio: float, required=True) -> str:
         assert embed_dim in self.support_dims
-        file = self.fill_new(self.name + '_clu_init_{}_{:.2f}.pkl'.format(embed_dim, topic_ratio))
+        file = self.fill(self.name + '_clu_init_{}_{:.2f}.pkl'.format(embed_dim, topic_ratio))
         if required and not iu.exists(file):
             raise ValueError('%s does not exist, embedding may have not been trained' % file)
         return file
+
+    def load_word2vec(self, embed_dim: int) -> Dict[str, np.ndarray]:
+        word2vec_file = self.get_word2vec_file(embed_dim)
+        return iu.load_pickle(word2vec_file)
+
+    def load_clu_init(self, embed_dim: int, topic_ratio: float = 1) -> np.ndarray:
+        clu_init_file = self.get_clu_init_file(embed_dim, topic_ratio)
+        return iu.load_pickle(clu_init_file)
 
     # def load_ifd_and_docarr(self):
     #     return self.load_ifd(), self.load_docarr()
@@ -85,22 +90,10 @@ class Data:
     #         len(wv_list), len(wv_list[0]), len(wv_list[0][1])))
     #     return dict(wv_list)
 
-    def load_docarr(self) -> List[Document]:
-        return du.load_docarr(self.get_docarr_file())
-
-    def load_word2wid(self) -> Dict[str, int]:
-        return iu.load_json(self.get_word2wid_file())
+    """ advanced features """
 
     def load_docarr_and_word2wid(self):
         return self.load_docarr(), self.load_word2wid()
-
-    def load_word2vec(self, embed_dim: int) -> Dict[str, np.ndarray]:
-        word2vec_file = self.get_word2vec_file(embed_dim)
-        return iu.load_pickle(word2vec_file)
-
-    def load_clu_init(self, embed_dim: int, topic_ratio: float = 1) -> np.ndarray:
-        clu_init_file = self.get_clu_init_file(embed_dim, topic_ratio)
-        return iu.load_pickle(clu_init_file)
 
     def train_word2vec(self, embed_dim: int):
         from utils.node_utils import Nodes
@@ -132,25 +125,32 @@ class Data:
     def get_topics(self):
         return np.array([d.topic for d in self.load_docarr()])
 
-    def get_matrix_topics(self, using):
-        assert using in {'tf', 'tfidf'}
+    def get_matrix(self, mtype):
+        assert mtype in {'tf', 'tfidf'}
         docarr, word2wid = self.load_docarr_and_word2wid()
-        matrix = None
-        if using == 'tf':
-            matrix = [d.tf for d in du.docarr_fit_tf(word2wid, docarr)]
-        if using == 'tfidf':
-            matrix = [d.tfidf for d in du.docarr_fit_tfidf(word2wid, docarr)]
-        return np.array(matrix), self.get_topics()
+        du.docarr_fit_tf(word2wid, docarr)
+        if mtype == 'tf':
+            # matrix = vstack([d.tf for d in docarr])
+            # matrix = matrix.todense()
+            matrix = [d.tf for d in docarr]
+        elif mtype == 'tfidf':
+            matrix = [d.tfidf for d in docarr]
+        else:
+            raise ValueError('fuck', mtype)
+        return vstack(matrix)
+        # return np.array(matrix)
 
     def get_matrix_topics_for_dec(self):
         from sklearn.feature_extraction.text import TfidfTransformer
-        matrix, topics = self.get_matrix_topics(using='tf')
+        matrix = self.get_matrix(mtype='tf')
+        topics = self.get_topics()
         topics = np.array(au.reindex(topics))
+        print(matrix.shape, matrix.dtype, matrix.size)
         matrix = TfidfTransformer(norm='l2', sublinear_tf=True).fit_transform(matrix)
         matrix = matrix.astype(np.float32)
         print(matrix.shape, matrix.dtype, matrix.size)
         matrix = np.asarray(matrix.todense()) * np.sqrt(matrix.shape[1])
-        print('todense succeed')
+        print('matrix transformed')
         p = np.random.permutation(matrix.shape[0])
         matrix = matrix[p]
         topics = topics[p]
@@ -162,16 +162,6 @@ class Data:
         docarr, word2wid = self.load_docarr_and_word2wid()
         matrix = [d.tfidf for d in du.docarr_fit_tfidf(word2wid, docarr)]
         # return np.array(matrix), self.get_topics()
-
-    def get_avg_embeds_and_topics(self, embed_dim):
-        docarr = self.load_docarr()
-        word2vec = self.load_word2vec(embed_dim)
-        e_dim = len(list(word2vec.values())[0])
-        vs_list = [[word2vec[w] for w in d.tokens if w in word2vec] for d in docarr]
-        avg_embeds = [np.zeros(e_dim) if len(vs) == 0 else np.mean(vs, axis=0) for vs in vs_list]
-        print('get avg: 0-len doc: {}/{}'.format(
-            sum(1 for v in vs_list if len(v) > 0), len(docarr)))
-        return np.array(avg_embeds), np.array([d.topic for d in docarr])
 
     def filter_from_temp(self):
         c = self.__class__
@@ -331,137 +321,8 @@ name_list = [_c.name for _c in class_list]
 name2d_class = dict(zip(name_list, class_list))
 name2d_object = dict(zip(name_list, object_list))
 
-
-class Sampler:
-    def __init__(self, d_cls):
-        if d_cls in name2d_class:
-            d_cls = name2d_class[d_cls]
-        self.d_obj: Data = d_cls()
-        self.seq_len: int = self.d_obj.seq_len
-        self.docarr: List[Document] = list()
-        self.word2wid: dict = dict()
-        self.word2vec: dict = dict()
-        self.eval_batches: List[List[Document]] = list()
-        self.clu_embed_init = self.word_embed_init = None
-
-    def pad_docarr(self, seq_len):
-        # inplace
-        assert seq_len is not None and seq_len > 0
-        for doc in self.docarr:
-            tokenids = doc.tokenids
-            n_tokens = len(tokenids)
-            if n_tokens == seq_len:
-                doc.tokenids = tokenids
-            elif n_tokens < seq_len:
-                doc.tokenids = tokenids + [0] * (seq_len - n_tokens)
-            else:
-                doc.tokenids = tokenids[:seq_len]
-
-    def load(self, embed_dim: int = 64, topic_ratio: float = 1,
-             use_pad: bool = True, use_tfidf: bool = False):
-        self.docarr, self.word2wid = self.d_obj.load_docarr_and_word2wid()
-        if use_pad:
-            self.pad_docarr(self.d_obj.seq_len)
-        if use_tfidf:
-            self.prepare_tf_tfidf()
-        self.prepare_embedding(embed_dim, topic_ratio)
-        self.eval_batches = [pos for pos, negs in self.generate(128, 0, False)]
-        # self.eval_batches = self.split_length(self.docarr, 256)
-
-    def prepare_embedding(self, embed_dim: int, topic_ratio: float):
-        self.word2vec = self.d_obj.load_word2vec(embed_dim)
-        self.clu_embed_init = self.d_obj.load_clu_init(embed_dim, topic_ratio)
-        self.word_embed_init = [None] * len(self.word2vec)
-        for word, wid in self.word2wid.items():
-            self.word_embed_init[wid - 1] = self.word2vec[word]
-        for e in self.word_embed_init:
-            assert e is not None
-        self.word_embed_init = np.array(self.word_embed_init)
-
-    def prepare_tf_tfidf(self):
-        du.docarr_fit_tfidf(self.word2wid, self.docarr)
-
-    # @staticmethod
-    # def split_length(docarr: List[Document], batch_size: int) -> List[List[Document]]:
-    #     docarr = sorted(docarr, key=lambda x: len(x.tokenids))
-    #     batches, batch = list(), list()
-    #     prev_len = len(docarr[0].tokenids)
-    #     for i, doc in enumerate(docarr):
-    #         doc_len = len(doc.tokenids)
-    #         if doc_len != prev_len or len(batch) >= batch_size:
-    #             batches.append(batch)
-    #             batch = [doc]
-    #         else:
-    #             batch.append(doc)
-    #         if i >= len(docarr) - 1:
-    #             batches.append(batch)
-    #             break
-    #         prev_len = doc_len
-    #     return batches
-
-    def generate(self, batch_size: int, neg_batch_num: int, shuffle: bool):
-        docarr = au.shuffle(self.docarr) if shuffle else self.docarr
-        docarr_list = au.split_slices(docarr, batch_size)
-        for arr in docarr_list:
-            yield arr, None
-        # batches = self.split_length(docarr, batch_size)
-        # print('shuffle_generate - batch num:', len(batches))
-        # for i in range(len(batches)):
-        #     p_batch: List[Document] = batches[i]
-        #     yield p_batch, None
-        # n_idxes: List[int] = np.random.choice([j for j in i_range if j != i], neg_batch_num)
-        # n_batches: List[List[Document]] = [batches[j] for j in n_idxes]
-        # yield p_batch, n_batches
-
-
-def summary_datasets():
-    import pandas as pd
-    df = pd.DataFrame(columns=['K', 'D', 'V', 'Avg-len', 'Max-len', 'Min-len'])
-    for idx, cls in enumerate([DataTrec, DataGoogle, DataEvent, Data20ng, DataReuters]):
-        d_obj = cls()
-        print(d_obj.new_docarr_file)
-        docarr, word2wid = d_obj.load_docarr_and_word2wid()
-        len_arr = [len(d.tokenids) for d in docarr]
-        K = len(set([d.topic for d in docarr]))
-        D = len(docarr)
-        V = len(word2wid)
-        avg_len = round(float(np.mean(len_arr)), 2)
-        max_len = round(float(np.max(len_arr)), 2)
-        min_len = round(float(np.min(len_arr)), 2)
-        df.loc[d_obj.name] = [K, D, V, avg_len, max_len, min_len]
-    print(df)
-    df.to_csv('summary.csv')
-
-
-def transfer_files(d_class: Data):
-    data = d_class()
-    print(data.name)
-    print(data.new_docarr_file)
-    print(data.word2wid_file)
-    print('train word2vec & centroids')
-    print()
-    for dim in [16, 32]:
-        for ratio in [1]:
-            print(data.name, dim, ratio)
-            data.train_word2vec(dim)
-            data.train_centroids(dim, ratio)
-    # data_path = iu.parent_name(data.new_docarr_file)
-    # iu.mkprnts(data.new_docarr_file)
-    #
-    # doc_arr = du.load_docarr(data.docarr_file)
-    # for doc in doc_arr:
-    #     doc.tokenids = [i + 1 for i in doc.tokenids]
-    # du.dump_docarr(data.new_docarr_file, doc_arr)
-    #
-    # ifd = data.load_ifd()
-    # orgn_word2wid = ifd.get_word2id()
-    # assert min(wid for wid in orgn_word2wid.values()) == 0
-    # new_word2wid = {word: wid + 1 for word, wid in orgn_word2wid.items()}
-    # iu.dump_json(data.word2wid_file, new_word2wid)
-
-
 if __name__ == '__main__':
-    from scipy.sparse import vstack
+    from clu.data.sampler import Sampler, transfer_files
 
     s = Sampler(Data20ng)
     s.load(64, 1, True)

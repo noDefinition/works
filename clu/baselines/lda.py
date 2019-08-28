@@ -1,8 +1,6 @@
 from collections import OrderedDict as Od
-
 import pandas as pd
 from sklearn.decomposition import LatentDirichletAllocation as LDA
-
 from utils import iu, mu, tu
 from clu.data.datasets import *
 
@@ -16,7 +14,7 @@ def run_lda(kwargs: dict):
     print(kwargs)
     kwargs_copy = kwargs.copy()
     d_class: Data = name2d_class[kwargs.pop('dname')]
-    tf_matrix, topics = d_class().get_matrix_topics(using='tf')
+    tf_matrix, topics = d_class().get_matrix(mtype='tf')
     x_new = LDA(**kwargs, n_jobs=1).fit_transform(tf_matrix)
     clusters = np.argmax(x_new, axis=1)
     kwargs_copy.pop('learning_method')
@@ -116,7 +114,7 @@ def one_run_for_word_distribution():
     d_class = DataReuters()
     clu_num = d_class.topic_num
     print(d_class.name)
-    matrix, topic_list = d_class.get_matrix_topics(using='tf')
+    matrix, topic_list = d_class.get_matrix(mtype='tf')
     ifd = d_class.load_ifd()
 
     lda_kwargs = dict([('doc_topic_prior', 0.1), ('topic_word_prior', 0.1), ('max_iter', 200),

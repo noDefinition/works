@@ -26,7 +26,7 @@ class LY:
         # return LY(*(self.pairs_list + other.pairs_list))
 
     def __mul__(self, other):
-        """ 前后级全连接 """
+        """ 前后级交叉串联 """
         assert isinstance(other, LY)
         if len(self.pairs_list) == 0 or len(other.pairs_list) == 0:
             raise ValueError('empty layer is not allowed')
@@ -76,8 +76,6 @@ def auto_gpu(func: Callable, args_list: List[Tuple], device2max: Dict, callback=
     device2remain = dict(device2max)
     max_pool_size = sum(device2remain.values())
     pool = list()
-    # timer = tmu.Timer(len(args_list))
-    # timer.progress(can_print=(idx >= max_pool_size - 1))
     pbar = tqdm(total=len(args_list), ncols=50, leave=True, desc='args')
     for idx, args in enumerate(args_list):
         recall_devices()
@@ -95,7 +93,7 @@ def subp(f, a, k, q):
 
 def run_on_end(args):
     device_id, gid = args
-    print('tu: run_on_end, gid=%d' % gid)
+    print(' ' * 8 + 'tu: run_on_end, gid=%d' % gid)
 
 
 def run_on_gpu(cmd_pre: str, od: dict, max2frac: dict, device_max: dict, device_id: int):
@@ -115,13 +113,14 @@ def run_od_list(cmd_pre: str, od_list, dev_ids, dev_max, subfunc=run_on_gpu, cal
 
 
 def get_dev2max(dev_ids, dev_max):
+    from typing import Iterable
     if isinstance(dev_max, int):
         dev2max = {dev_id: dev_max for dev_id in dev_ids}
-    elif isinstance(dev_max, list):
-        assert len(dev_max) == len(dev_ids)
+    elif isinstance(dev_max, Iterable):
+        # assert len(dev_max) == len(dev_ids)
         dev2max = dict(zip(dev_ids, dev_max))
     else:
-        raise ValueError('dev_max invalid: {}'.format(dev_max))
+        raise ValueError('dev_max invalid: ({}){}'.format(type(dev_max), dev_max))
     return dev2max
 
 
@@ -134,8 +133,11 @@ def get_max2frac():
 
 def update_od_list(od_list, log_path, shuffle):
     for i, od in enumerate(od_list):
-        od[X.gid] = i
-        od[X.lg] = log_path
+        new_od = {X.gid: i, X.lg: log_path}
+        new_od.update(od)
+        od_list[i] = new_od
+        # od[X.gid] = i
+        # od[X.lg] = log_path
     if shuffle:
         od_list = au.shuffle(od_list)
     for i, od in enumerate(od_list):

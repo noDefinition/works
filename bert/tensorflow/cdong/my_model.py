@@ -1,4 +1,4 @@
-from bert.modeling import *
+from bert.tensorflow.modeling import *
 
 
 class MyBertModel(object):

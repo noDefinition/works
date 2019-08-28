@@ -1,6 +1,6 @@
 import tensorflow as tf
 
-from .. import modeling, tokenization
+from bert.tensorflow import tokenization, modeling
 from .my_model import MyBertModel
 
 

@@ -30,8 +30,8 @@ def write_lines(file, lines, mode='w', newline='\n'):
         fp.writelines([line + newline for line in lines])
 
 
-def load_array(file, mode='r', **kwargs):
-    lines = read_lines(file, mode=mode)
+def load_array(file, **kwargs):
+    lines = read_lines(file, mode='r')
     return [loads(line, **kwargs) for line in lines]
 
 
@@ -72,6 +72,11 @@ def exists(path): return os.path.exists(path)
 
 
 def join(*args): return os.path.join(*list(map(str, args)))
+
+
+def remove(file):
+    if exists(file):
+        Path(file).unlink()
 
 
 def rmtree(path):

@@ -122,19 +122,17 @@ def model_fn_builder(bert_config, init_checkpoint, learning_rate,
             token_type_ids=segment_ids,
             use_one_hot_embeddings=use_one_hot_embeddings)
 
-        (masked_lm_loss,
-         masked_lm_example_loss, masked_lm_log_probs) = get_masked_lm_output(
-            bert_config, model.get_sequence_output(), model.get_embedding_table(),
-            masked_lm_positions, masked_lm_ids, masked_lm_weights)
+        (masked_lm_loss, masked_lm_example_loss, masked_lm_log_probs) = \
+            get_masked_lm_output(
+                bert_config, model.get_sequence_output(), model.get_embedding_table(),
+                masked_lm_positions, masked_lm_ids, masked_lm_weights)
 
-        (next_sentence_loss, next_sentence_example_loss,
-         next_sentence_log_probs) = get_next_sentence_output(
-            bert_config, model.get_pooled_output(), next_sentence_labels)
+        (next_sentence_loss, next_sentence_example_loss, next_sentence_log_probs) = \
+            get_next_sentence_output(
+                bert_config, model.get_pooled_output(), next_sentence_labels)
 
         total_loss = masked_lm_loss + next_sentence_loss
-
         tvars = tf.trainable_variables()
-
         initialized_variable_names = {}
         scaffold_fn = None
         if init_checkpoint:
@@ -252,9 +250,7 @@ def get_masked_lm_output(bert_config, input_tensor, output_weights, positions,
 
         label_ids = tf.reshape(label_ids, [-1])
         label_weights = tf.reshape(label_weights, [-1])
-
-        one_hot_labels = tf.one_hot(
-            label_ids, depth=bert_config.vocab_size, dtype=tf.float32)
+        one_hot_labels = tf.one_hot(label_ids, depth=bert_config.vocab_size, dtype=tf.float32)
 
         # The `positions` tensor might be zero-padded (if the sequence is too
         # short to have the maximum number of predictions). The `label_weights`

@@ -9,28 +9,11 @@ s_ari = 'ari'
 eval_scores = (s_acc, s_ari, s_nmi)
 
 
-def merge(array):
+def merge(items):
     res = list()
-    for a in array:
+    for a in items:
         res.extend(a)
     return res
-
-
-# def group_data_frame(data_frame, column):
-#     value_set = sorted(set(data_frame[column]))
-#     return [(Od([(column, v)]), data_frame[data_frame[column] == v]) for v in value_set]
-#
-#
-# def group_data_frame_columns(data_frame, columns):
-#     groups = [(Od(), data_frame)]
-#     for col in columns:
-#         for _ in range(len(groups)):
-#             p_od, p_df = groups.pop(0)
-#             for n_od, n_df in group_data_frame(p_df, col):
-#                 p_od = p_od.copy()
-#                 p_od.update(n_od)
-#                 groups.append((p_od, n_df))
-#     return groups
 
 
 def shuffle(array, inplace=False):
@@ -44,9 +27,9 @@ def rehash(items, sort=True):
     return {item: idx for idx, item in enumerate(items)}
 
 
-def reindex(array):
-    item2idx = dict((item, idx) for idx, item in enumerate(sorted(set(array))))
-    return [item2idx[item] for item in array]
+def reindex(items):
+    item2idx = dict((item, idx) for idx, item in enumerate(sorted(set(items))))
+    return [item2idx[item] for item in items]
 
 
 def count_occurence(y1, y2):
@@ -58,9 +41,10 @@ def count_occurence(y1, y2):
 
 def score(y_true, y_pred, using_score):
     func = {
-        s_acc: acc,
+        s_acc: ACC,
         s_ari: metrics.adjusted_rand_score,
-        s_nmi: metrics.normalized_mutual_info_score,
+        s_nmi: NMI,
+        # s_nmi: metrics.normalized_mutual_info_score,
         'auc': metrics.roc_auc_score,
     }[using_score.lower()]
     return round(float(func(y_true, y_pred)), 4)
@@ -70,8 +54,13 @@ def scores(y_true, y_pred, using_scores=eval_scores):
     return Od((s, score(y_true, y_pred, s)) for s in using_scores)
 
 
-def acc(y_true, y_pred):
-    from sklearn.utils.linear_assignment_ import linear_assignment
+def NMI(y_true, y_pred):
+    return metrics.normalized_mutual_info_score(y_true, y_pred)
+
+
+def ACC(y_true, y_pred):
+    # from sklearn.utils.linear_assignment_ import linear_assignment
+    from scipy.optimize import linear_sum_assignment as linear_assignment
     y_true, y_pred = reindex(y_true), reindex(y_pred)
     assert len(y_true) == len(y_pred)
     d = max(max(y_true), max(y_pred)) + 1
@@ -79,7 +68,7 @@ def acc(y_true, y_pred):
     for y_t, y_p in zip(y_true, y_pred):
         w[y_t][y_p] += 1
     ind = linear_assignment(w.max() - w)
-    return sum([w[i][j] for i, j in ind]) / len(y_pred)
+    return sum([w[i][j] for i, j in zip(*ind)]) / len(y_pred)
 
 
 def mean_std(array):
@@ -108,7 +97,6 @@ def grid_params(name_value_list):
         od = Od(zip(names, [None] * len(names)))
         for n_idx, v_idx in enumerate(idx_vec):
             n, v = names[n_idx], values_list[n_idx][v_idx]
-            # if not callable(v):
             od[n] = v
         return od
 
@@ -124,11 +112,6 @@ def cosine_similarity(mtx1, mtx2=None, dense_output=True):
 def transpose(array):
     # items in array should share the same length
     return list(zip(*array))
-
-
-def split_multi_process(array, p_num):
-    import math
-    return list(split_slices(array, math.ceil(len(array) / p_num)))
 
 
 def split_slices(array, batch_size):
@@ -160,8 +143,7 @@ def entries2name(entries, include=None, exclude=None, inner='=', inter=',', post
         kv_list = entries
     else:
         raise TypeError('unexpected type : {}'.format(type(entries)))
-    # pairs = ['{}{}{}'.format(k, inner, v) for k, v in kv_list if _can_include(k, include, exclude)]
-    pairs = [f'{k}{inner}{v}' for k, v in kv_list if _can_include(k, include, exclude)]
+    pairs = ['{}{}{}'.format(k, inner, v) for k, v in kv_list if _can_include(k, include, exclude)]
     return inter.join(pairs) + postfix
 
 

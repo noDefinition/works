@@ -1,5 +1,5 @@
 import numpy as np
-from clu.me import C
+from clu.me import C, CluArgs
 from utils.deep.funcs import *
 from tensorflow.keras.layers import Masking, CuDNNLSTM
 from typing import List

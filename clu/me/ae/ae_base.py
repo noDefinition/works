@@ -1,12 +1,12 @@
 import numpy as np
-from clu.me import C
+from clu.me import C, CluArgs
 from utils.deep.funcs import *
 from utils.doc_utils import Document
 
 
 # noinspection PyAttributeOutsideInit
-class BaseAE(object):
-    def __init__(self, args: dict):
+class AEBase(object):
+    def __init__(self, args: CluArgs):
         self.x_init = tf.contrib.layers.xavier_initializer()
         self.global_step = 0
         self.debug_parts = []
@@ -17,10 +17,10 @@ class BaseAE(object):
         self.get_hyper_params(args)
 
     def get_hyper_params(self, args):
-        self.lr: float = args[C.lr]
-        self.dim_h: int = args[C.hd]
-        self.c_init: int = args[C.cini]
-        self.w_init: int = args[C.wini]
+        self.lr: float = args.lr
+        self.dim_h: int = args.hd
+        self.c_init: int = args.cini
+        self.w_init: int = args.wini
 
     def define_cluster_embed(self, clu_init):
         self.num_c, self.dim_c = clu_init.shape
@@ -40,9 +40,8 @@ class BaseAE(object):
 
     def define_inputs(self):
         lk = tf.nn.embedding_lookup
-        # self.ph_if_sample = tf.placeholder(tf.bool, (), name='if_sample')
-        # self.ph_drop_keep = tf.placeholder_with_default(1., (), name='dropout_keep')
         self.ph_is_train = tf.placeholder(tf.bool, (), name='is_train')
+        self.p_tfidf = tf.placeholder(f32, (None, self.num_w), name='p_tfidf')  # (bs, nw)
         self.p_wids = tf.placeholder(i32, (None, None), name='p_seq')  # (bs, tn)
         self.p_mask = self.get_mask(self.p_wids, False, name='p_mask')  # (bs, tn)
         self.p_lkup = lk(self.w_embed, self.p_wids, name='p_lkup')  # (bs, tn, dw)
@@ -81,8 +80,8 @@ class BaseAE(object):
         raise ValueError('NEED IMPLEMENTATION')
 
     def define_optimizer(self):
-        self.optimizer = tf.train.AdamOptimizer(learning_rate=self.lr, name='BaseAE_Adam')
-        self.train_op = self.optimizer.minimize(self.train_loss)
+        self.train_adam = tf.train.AdamOptimizer(learning_rate=self.lr, name='BaseAE_Adam')
+        self.train_op = self.train_adam.minimize(self.train_loss)
 
     def build(self, word_init: np.ndarray, clu_init: np.ndarray):
         self.define_word_embed(word_init)
@@ -110,8 +109,9 @@ class BaseAE(object):
     def run_parts(self, docarr: List[Document], *parts):
         assert len(parts) > 0
         fd = self.get_fd(docarr, is_train=False)
-        parts_res = self.sess.run(parts, feed_dict=fd)
-        return parts_res if len(parts_res) > 1 else parts_res[0]
+        parts = parts if len(parts) > 1 else parts[0]
+        ret = self.sess.run(parts, feed_dict=fd)
+        return ret
 
     def run_merge(self, docarr: List[Document], merge):
         fd = self.get_fd(docarr, is_train=False)
