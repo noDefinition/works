@@ -49,7 +49,7 @@ class Sampler:
     def prepare_tf_tfidf(self):
         du.docarr_fit_tfidf(self.word2wid, self.docarr)
 
-    def get_xy_for_dec_improve(self, weight_a: float = 0.0001, n_pc: int = 1):
+    def get_xy_for_stc(self, weight_a: float = 0.0001, n_pc: int = 1):
         from scipy.sparse import vstack
         from sklearn.preprocessing import MinMaxScaler
         from sklearn.decomposition import TruncatedSVD
@@ -159,7 +159,7 @@ def transfer_files(d_class: Data):
 def main():
     s = Sampler(DataTrec)
     s.load(64, 1, 0, True)
-    s.get_xy_for_dec_improve()
+    s.get_xy_for_stc()
     return
 
     from utils import au

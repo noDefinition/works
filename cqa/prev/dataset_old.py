@@ -433,7 +433,7 @@ def sim(ds='test'):
 
 
 def main():
-    print('hello world, dataset.py')
+    print('hello world, uclu_bert_dataset.py')
     bt = time.time()
     # sim('so')
     # print('time:', time.time() - bt)

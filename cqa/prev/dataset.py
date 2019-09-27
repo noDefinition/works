@@ -404,7 +404,7 @@ class sk_data(tf_data):
 
 
 def main():
-    print('hello world, dataset.py')
+    print('hello world, uclu_bert_dataset.py')
     bt = time.time()
     if 0:
         data = sk_data('so')

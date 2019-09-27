@@ -44,7 +44,7 @@ class Runner:
         self.sampler = Sampler(self.data_name)
         self.history = list()
         self.epoch = 0
-        self.ppp(iu.dumps(U.))
+        self.ppp(iu.dumps(args_dict))
         # np.random.seed(5413 + self.gid)
         # tf.set_random_seed(17256 + self.gid)
 

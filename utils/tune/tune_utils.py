@@ -76,7 +76,7 @@ def auto_gpu(func: Callable, args_list: List[Tuple], device2max: Dict, callback=
     device2remain = dict(device2max)
     max_pool_size = sum(device2remain.values())
     pool = list()
-    pbar = tqdm(total=len(args_list), ncols=50, leave=True, desc='args')
+    pbar = tqdm(total=len(args_list), ncols=60, leave=True, desc='tune')
     for idx, args in enumerate(args_list):
         recall_devices()
         allocate_run(args)

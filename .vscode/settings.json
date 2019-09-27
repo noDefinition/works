@@ -1,0 +1,88 @@
+{
+    "python.pythonPath": "D:\\DEVELOPMENT\\Anaconda\\envs\\works\\python.exe",
+    "python.formatting.provider": "autopep8",
+    // "python.formatting.yapfArgs": [
+    "python.formatting.autopep8Args": [
+        "--max-line-length=100"
+    ],
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.linting.pylintArgs": [
+        "--max-line-length=100",
+        "--disable=C0103,C0111,E1305,R0902,R0914,W0401,W0611,W0614,W0105",
+    ],
+    "workbench.editor.enablePreview": false,
+    "editor.rulers": [
+        100
+    ],
+    "deploy.reloaded": {
+        "packages": [
+            {
+                "name": "Fuck",
+                "description": "Fuck this shit",
+                "exclude": [
+                    ".vscode/",
+                    ".idea/",
+                    "cqa/",
+                    "clu/",
+                ],
+                "targets": [
+                    "new",
+                    "gpu"
+                ]
+            }
+        ],
+        "targets": [
+            {
+                "type": "sftp",
+                "name": "new",
+                "description": "new",
+                "host": "59.78.194.116",
+                "port": 22,
+                "user": "cdong",
+                "password": "1q2w3e4r",
+                "dir": "/home/cdong/works"
+            },
+            // {
+            //     "type": "sftp",
+            //     "name": "1702",
+            //     "description": "1702",
+            //     "host": "59.78.194.85",
+            //     "port": 22,
+            //     "user": "cdong",
+            //     "password": "1q2w3e4r",
+            //     "dir": "/home/cdong/works"
+            // },
+            {
+                "type": "sftp",
+                "name": "gpu",
+                "description": "gpu",
+                "host": "58.198.177.46",
+                "port": 22,
+                "user": "cdong",
+                "password": "1q2w3e4r",
+                "dir": "/home/cdong/works"
+            },
+            {
+                "type": "sftp",
+                "name": "cpu",
+                "description": "cpu",
+                "host": "202.120.80.35",
+                "port": 24922,
+                "user": "cdong",
+                "password": "1q2w3e4r",
+                "dir": "/home/cdong/works"
+            }
+        ]
+    },
+    "remotefs.remote": {
+        "new": {
+            "scheme": "sftp",
+            "host": "59.78.194.116",
+            "username": "cdong",
+            "password": "1q2w3e4r",
+            "rootPath": "/"
+            // "privateKeyPath": "/Users/xx/.ssh/id_rsa",
+        }
+    },
+}

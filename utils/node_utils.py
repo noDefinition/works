@@ -44,7 +44,7 @@ class Nodes:
         else:
             if default is Nodes.dft:
                 raise ValueError(
-                    'dc: [{}] uses default value, but no default value is given'.
+                    'dc: [{}] uses default value, no value is given'.
                         format(Nodes.get_alias()))
             else:
                 return default

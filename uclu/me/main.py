@@ -1,24 +1,24 @@
 from typing import List
 import numpy as np
-from utils import lu, iu, au
+from utils import lu, iu, au, tmu
 from uclu.me import UcluArgs, U
 from uclu.me.models import *
 from uclu.data.document import Document
 from uclu.data.datasets import Sampler
-from uclu.me.models.V1 import V1
 
 
 class Runner:
     def __init__(self, args: UcluArgs):
         self.args = args
-        self.epoch_num = args.ep
-        self.embed_dim = args.ed
+        self.n_epoch = args.ep
+        self.d_embed = args.ed
         self.title_pad = args.tpad
         self.body_pad = args.bpad
+        self.batch_size = args.bs
         self.sampler = Sampler(args.dn)
-        self.model = name2m_class[V1.__name__](args)
+        self.model = name2m_class[args.vs](args)
         self.epoch: int = 0
-        self.hist = list()
+        self.history = list()
 
         self.logger = None
         args_dict = {k: v for k, v in args.__dict__.items() if k != 'parser' and v is not None}
@@ -33,21 +33,31 @@ class Runner:
             self.logger.info(info)
 
     def main(self):
-        self.sampler.load(self.embed_dim, self.title_pad, self.body_pad, 1, False)
+        self.sampler.load(self.d_embed, self.title_pad, self.body_pad, topic_ratio=1)
         self.model.build(self.sampler.w_embed, self.sampler.u_embed, self.sampler.c_embed)
-        for e in range(self.epoch_num):
+        # self.model.cuda(self.model.device)
+        for e in range(self.n_epoch):
             self.one_epoch()
             if self.should_early_stop():
                 return
 
+    @tmu.stat_time_elapse
     def one_epoch(self):
-        docarr_batches = list(self.sampler.generate(128, True))
+        docarr_batches = list(self.sampler.generate(self.batch_size, True))
         for bid, docarr in enumerate(docarr_batches):
             self.one_batch(bid, docarr)
 
     def one_batch(self, bid: int, docarr: List[Document]):
         self.model.train_step(docarr)
+        if self.is_lucky(0.01):
+            losses = self.model.get_losses(docarr)
+            self.ppp(f'losses: {losses}')
 
+    @staticmethod
+    def is_lucky(prob: float):
+        return np.random.random() < prob
+
+    @tmu.stat_time_elapse
     def evaluate(self):
         y_true, y_pred = list(), list()
         for docarr in self.sampler.eval_batches:
@@ -57,9 +67,26 @@ class Runner:
 
     def should_early_stop(self) -> bool:
         scores = self.evaluate()
-        value = np.mean(list(scores.values()))
         self.ppp(iu.dumps(scores))
-        self.hist.append(value)
+        value = np.mean(list(scores.values()))
+        h = self.history
+        h.append(value)
+        # if self.enable_save_params and len(h) >= 1 and score > max(h):
+        #     self.model.save(self.param_file)
+        if len(h) <= 20:
+            return False
+        early = 'early stop[epoch {}]:'.format(len(h))
+        if (len(h) >= 20 and value <= 0.1) or (len(h) >= 50 and value <= 0.2):
+            self.ppp(early + 'score too small-t.s.')
+            return True
+        peak_idx = int(np.argmax(h))
+        from_peak = np.array(h)[peak_idx:] - h[peak_idx]
+        if len(from_peak) >= 20:
+            self.ppp(early + 'no increase for too long-n.i.')
+            return True
+        if sum(from_peak) <= -1.0:
+            self.ppp(early + 'drastic decline-d.d.')
+            return True
         return False
 
 

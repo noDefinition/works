@@ -1,5 +1,4 @@
 import torch.nn as nn
-
 from .bert import BERT
 
 
@@ -14,11 +13,10 @@ class BERTLM(nn.Module):
         :param bert: BERT model which should be trained
         :param vocab_size: total vocab size for masked_lm
         """
-
         super().__init__()
         self.bert = bert
-        self.next_sentence = NextSentencePrediction(self.bert.hidden)
-        self.mask_lm = MaskedLanguageModel(self.bert.hidden, vocab_size)
+        self.next_sentence = NextSentencePrediction(self.bert.d_hidden)
+        self.mask_lm = MaskedLanguageModel(self.bert.d_hidden, vocab_size)
 
     def forward(self, x, segment_label):
         x = self.bert(x, segment_label)
@@ -31,9 +29,6 @@ class NextSentencePrediction(nn.Module):
     """
 
     def __init__(self, hidden):
-        """
-        :param hidden: BERT model output size
-        """
         super().__init__()
         self.linear = nn.Linear(hidden, 2)
         self.softmax = nn.LogSoftmax(dim=-1)
@@ -49,10 +44,6 @@ class MaskedLanguageModel(nn.Module):
     """
 
     def __init__(self, hidden, vocab_size):
-        """
-        :param hidden: output size of BERT model
-        :param vocab_size: total vocab size
-        """
         super().__init__()
         self.linear = nn.Linear(hidden, vocab_size)
         self.softmax = nn.LogSoftmax(dim=-1)

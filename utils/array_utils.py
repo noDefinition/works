@@ -6,7 +6,7 @@ from sklearn import metrics
 s_nmi = 'nmi'
 s_acc = 'acc'
 s_ari = 'ari'
-eval_scores = (s_acc, s_ari, s_nmi)
+eval_scores = (s_nmi, s_ari, s_acc)
 
 
 def merge(items):
@@ -55,7 +55,13 @@ def scores(y_true, y_pred, using_scores=eval_scores):
 
 
 def NMI(y_true, y_pred):
-    return metrics.normalized_mutual_info_score(y_true, y_pred)
+    from .node_utils import Nodes
+    kwargs = dict(labels_true=y_true, labels_pred=y_pred)
+    extra = Nodes.select(n1702=dict(average_method='arithmetic'),
+                         nnew=dict(average_method='arithmetic'), default={})
+    kwargs.update(extra)
+    return metrics.normalized_mutual_info_score(**kwargs)
+    # return metrics.normalized_mutual_info_score(y_true, y_pred, average_method='arithmetic')
 
 
 def ACC(y_true, y_pred):
@@ -114,12 +120,12 @@ def transpose(array):
     return list(zip(*array))
 
 
-def split_slices(array, batch_size):
+def split_slices(array: list, batch_size: int):
     for since, until in split_since_until(len(array), batch_size):
         yield array[since: until]
 
 
-def split_since_until(max_len, batch_size):
+def split_since_until(max_len: int, batch_size: int):
     since, until = 0, min(max_len, batch_size)
     while since < max_len:
         yield since, until

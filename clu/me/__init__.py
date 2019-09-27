@@ -6,10 +6,9 @@ class CluArgs(Args):
         super(CluArgs, self).__init__()
 
         self.cn = self.add_arg('cn', type=int, help='cluster num')
-        self.bs = self.add_arg('bs', type=int, help='pos batch size')
         self.ns = self.add_arg('ns', type=int, help='neg batch num')
         self.sc = self.add_arg('sc', type=float, help='scale for normal init')
-        self.lr = self.add_arg('lr', type=float, help='learning rate')
+        # self.lr = self.add_arg('lr', type=float, help='learning rate')
         self.pad = self.add_arg('pad', type=int, help='if pad sequences')
 
         self.ed = self.add_arg('ed', type=int, help='embed dim')

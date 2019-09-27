@@ -13,7 +13,7 @@ class TopKSum(BasicPair):
         return t
 
     def get_question_rep(self):
-        q, q_mask = super().get_question_rep()
+        q, q_mask = super().get_que_rep()
         q = self.text_rep(q)
         return q, q_mask
 

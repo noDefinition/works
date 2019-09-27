@@ -1,6 +1,5 @@
 import pandas as pd
 
-# from clu.baselines.lda import run_multi_and_output
 from clu.data.datasets import *
 from utils.id_freq_dict import IdFreqDict
 from utils import iu, mu, tu

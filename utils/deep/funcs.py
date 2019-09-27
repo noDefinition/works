@@ -3,6 +3,7 @@ import tensorflow as tf
 import tensorflow.summary as su
 from tensorflow.summary import histogram, scalar
 from tensorflow.keras.layers import Dense
+
 # from tensorflow.layers import Dense
 
 i16 = tf.int16
@@ -44,88 +45,6 @@ def postpone_denses(inputs, denses: List[Dense], name: str):
         with tf.name_scope(f'{name}_{i}'):
             inputs = d.apply(inputs)
     return inputs
-
-
-# def normal(shape, scale, loc=0):
-#     return np.random.normal(loc=loc, scale=scale, size=shape)
-#
-#
-# def parse_variable(value, trainable=True, name=None, dtype=tf.float32):
-#     if isinstance(value, tf.Variable) or isinstance(value, tf.Tensor):
-#         return value
-#     elif value is not None:
-#         return tf.Variable(value, trainable=trainable, name=name, dtype=dtype)
-#
-#
-# def element_wise(a, b, func=tf.multiply, reduce=None, axis=None, keepdims=None, name=None):
-#     with tf.name_scope(name):
-#         wise = func(a, b)
-#         if reduce is not None:
-#             if callable(reduce):
-#                 reduce_f = reduce
-#             elif isinstance(reduce, str):
-#                 reduce_f = {'sum': tf.reduce_sum, 'mean': tf.reduce_mean}[reduce]
-#             else:
-#                 raise TypeError('unusable reduce: {}'.format(reduce))
-#             wise = reduce_f(wise, axis=axis, keepdims=keepdims)
-#         return wise
-#
-#
-# def tensor_dot(t, w, b=None, axes=None, activation=None, name=None):
-#     with tf.name_scope(name):
-#         if axes is None:
-#             axes = ([-1], [0])
-#         res = tf.tensordot(t, w, axes)
-#         if b is not None:
-#             res = tf.add(res, b)
-#         if activation is not None:
-#             res = activation(res)
-#         return res
-#
-#
-# def tile_axes(t, axes, tile):
-#     rank = len(t.shape)
-#     multiplies = [1] * rank
-#     for a, n in zip(axes, tile):
-#         if n is not None and n > 1:
-#             multiplies[a if a >= 0 else rank + a] = n
-#     return tf.tile(t, multiplies) if sum(multiplies) > rank else t
-#
-#
-# def expand_dims(t, axes, tile=None):
-#     if isinstance(axes, (int, np.int)):
-#         t = tf.expand_dims(t, axis=axes)
-#         if tile is not None:
-#             t = tile_axes(t, axes=axes, tile=tile)
-#     else:
-#         axes = np.array(axes)
-#         axes[axes < 0] += len(t.shape)
-#         arg_sort = np.argsort(axes)
-#         axes = axes[arg_sort]
-#         for idx, axis in enumerate(axes):
-#             t = tf.expand_dims(t, axis=axis + idx)
-#         if tile is not None:
-#             axes = axes + np.arange(len(axes))
-#             tile = np.array(tile)[arg_sort]
-#             t = tile_axes(t, axes=axes, tile=tile)
-#     return t
-#
-#
-# def get_trainable(*objects):
-#     import utils.array_utils as au
-#     vs = au.merge([o] if isinstance(o, tf.Variable) else o.trainable_variables() for o in objects)
-#     return sort_variables(set([v for v in vs if v.trainable]))
-#
-#
-# def sort_variables(variables, key=lambda v: v.name):
-#     return sorted(variables, key=key)
-#
-#
-# def subtract_from(from_, *subs_):
-#     res = set(from_)
-#     for sub in subs_:
-#         res.difference_update(set(sub))
-#     return res
 
 
 def inner_dot(a, b, axis=-1, keepdims=False, name=None):
@@ -180,16 +99,3 @@ def control_dependencies(cond, train_func):
             train_func()
     else:
         train_func()
-
-# def add_dropout(tensor, keep_prob, name=None):
-#     return tf.nn.dropout(tensor, keep_prob=keep_prob, name=name)
-#
-#
-# def add_batch_norm(tensor, is_train, name=None):
-#     return tf.layers.batch_normalization(tensor, training=is_train, name=name)
-#
-#
-# def wrap_batch_norm(is_train):
-#     def add_bn(*args): return add_batch_norm(args[0], is_train)
-#
-#     return add_bn

@@ -1,13 +1,11 @@
 from typing import List
-# from collections import Counter
-
 import numpy as np
 from scipy.sparse import vstack
 from scipy.sparse.csr import csr_matrix
 from sklearn import preprocessing
 from sklearn.feature_extraction.text import TfidfTransformer
 
-from utils import iu, mu, au
+from utils import au, iu, mu
 
 
 class Document:
@@ -17,8 +15,10 @@ class Document:
         self.uint: int = 0
         self.title: List[int] = list()
         self.body: List[List[int]] = list()
+
         self.tseq: List[int] = list()
         self.bseq: List[int] = list()
+        self.all_texts: List[List[int]] = list()
         self.tf = self.tfidf = None
 
     def from_dict(self, obj: dict):
@@ -29,36 +29,49 @@ class Document:
     def to_dict(self) -> dict:
         return {k: getattr(self, k) for k in self.attrs}
 
-    def fit_tf(self, word2wint: dict):
+    def flatten_body(self):
+        from itertools import chain
+        return chain.from_iterable(self.body)
+        # return (wint for wints in self.body for wint in wints)
+
+    def fit_tf(self, word2wint: dict, add_body: bool):
         v_size = len(word2wint) + min(word2wint.values())
         tf = np.zeros(v_size, dtype=np.int32)
         for wid in self.title:
             tf[wid] += 1
-        body_gen = (i for wints in self.body for i in wints)
-        for wid in body_gen:
-            tf[wid] += 1
+        if add_body:
+            body_gen = (wint for wints in self.body for wint in wints)
+            for wid in body_gen:
+                tf[wid] += 1
         self.tf = csr_matrix(tf)
 
+    def split_texts(self, max_text_len: int):
+        all_texts = [self.title]
+        bwids = list(self.flatten_body())
+        n = len(bwids)
+        if n <= 20:
+            bs = n
+        elif n <= 40:
+            bs = int(np.ceil(n / 2))
+        elif n <= 120:
+            bs = int(np.ceil(n / 3))
+        else:
+            bs = max_text_len
+        wint_split = au.split_slices(bwids, batch_size=bs)
+        all_texts.extend(wint_split)
+        self.all_texts = all_texts
 
-# def docarr_fit_tf(word2x: dict, docarr: List[Document]):
-#     for doc in docarr:
-#         doc.fit_tf(word2x)
-#     print('tf transform over')
-#     return docarr
 
-
-def _get_docarr_tf(docarr: List[Document], word2wint: dict):
-    ret = []
+def docarr_fit_tf(docarr: List[Document], word2wint: dict, add_body: bool):
     for doc in docarr:
-        doc.fit_tf(word2wint)
-        ret.append(doc.tf)
-    return ret
+        doc.fit_tf(word2wint, add_body)
+    return [doc.tf for doc in docarr]
 
 
-def docarr_fit_tf_multi(docarr: List[Document], word2wint: dict, p_num: int):
+def docarr_fit_tf_multi(docarr: List[Document], word2wint: dict, add_body: bool, p_num: int):
     docarr_list = mu.split_multi(docarr, p_num)
-    args = [(docarr, word2wint) for docarr in docarr_list]
-    tfarr_list = mu.multi_process(_get_docarr_tf, args)
+    args = [(docarr, word2wint, add_body) for docarr in docarr_list]
+    tfarr_list = mu.multi_process(docarr_fit_tf, args)
     tf_gen = (tf for tfarr in tfarr_list for tf in tfarr)
     for doc, tf in zip(docarr, tf_gen):
         doc.tf = tf

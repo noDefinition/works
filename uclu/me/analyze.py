@@ -5,6 +5,9 @@ import numpy as np
 from clu.me import C
 import pandas as pd
 
+pd.set_option('display.max_columns', 1000)
+pd.set_option('display.width', 1000)
+
 
 class Analyze(object):
     def __init__(self):
@@ -14,9 +17,9 @@ class Analyze(object):
         self.choose_log: bool = self.args.c
         self.choose_log: bool = True
         self.inner_top: int = 5
-        self.exclude: set = None
-        self.group_by: List = None
-        self.log_path: str = None
+        self.exclude: set = set()
+        self.group_by: List = list()
+        self.log_path: str = './'
 
     @staticmethod
     def read_file(file: str):
@@ -99,6 +102,4 @@ class Analyze(object):
 
 
 if __name__ == '__main__':
-    pd.set_option('display.max_columns', 1000)
-    pd.set_option('display.width', 1000)
     Analyze().main()
