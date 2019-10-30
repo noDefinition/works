@@ -4,7 +4,8 @@ import utils.array_utils as au
 
 def split_multi(array, process_num):
     from math import ceil
-    return au.split_slices(array, int(ceil(len(array) / process_num)))
+    batch_size = int(ceil(len(array) / process_num))
+    return list(au.split_slices(array, batch_size))
 
 
 def multi_process(func, args_list=None, kwargs_list=None, while_wait=None):

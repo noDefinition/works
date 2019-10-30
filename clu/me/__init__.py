@@ -8,7 +8,6 @@ class CluArgs(Args):
         self.cn = self.add_arg('cn', type=int, help='cluster num')
         self.ns = self.add_arg('ns', type=int, help='neg batch num')
         self.sc = self.add_arg('sc', type=float, help='scale for normal init')
-        # self.lr = self.add_arg('lr', type=float, help='learning rate')
         self.pad = self.add_arg('pad', type=int, help='if pad sequences')
 
         self.ed = self.add_arg('ed', type=int, help='embed dim')
@@ -35,10 +34,8 @@ class CluArgs(Args):
         self.bn = self.add_arg('bn', type=int, help='if use batch normalization')
         self.wtrn = self.add_arg('wtrn', type=int, help='if train word embedding')
         self.ctrn = self.add_arg('ctrn', type=int, help='if train cluster embedding')
-        self.wini = self.add_arg(
-            'wini', type=int, default=1, help='word embed 0:random, 1:pre-trained')
-        self.cini = self.add_arg(
-            'cini', type=int, default=1, help='cluster embed 0:random, 1:pre-trained')
+        self.wini = self.add_arg('wini', type=int, help='word embed 0:random, 1:pre-trained')
+        self.cini = self.add_arg('cini', type=int, help='cluster embed 0:random, 1:pre-trained')
 
         """ sbx """
         self.useb = self.add_arg('useb', type=int, help='if use bias in denses')
@@ -48,7 +45,7 @@ class CluArgs(Args):
         self.alpha = self.add_arg('alpha', type=float, help='hyper-param: alpha')
         self.gamma = self.add_arg('gamma', type=float, help='hyper-param: gamma')
         self.beta = self.add_arg('beta', type=float, help='hyper-param: beta')
-        # self.span = self.add_arg('span', type=float, help='span of changing alpha')
+        self.span = self.add_arg('span', type=float, help='span of changing alpha')
 
         """ spectral """
         self.sigma = self.add_arg('sigma', type=float, help='sigma of kernel')
@@ -57,6 +54,10 @@ class CluArgs(Args):
         self.cencd = self.add_arg('cencd', type=float, help='coeff of encode loss')
         self.cpurt = self.add_arg('cpurt', type=float, help='coeff of purity loss')
         self.ptncmb = self.add_arg('ptncmb', type=int, help='pretrain combination')
+
+        """ clu_t """
+        self.trep = self.add_arg('trep', type=int, help='type of pre, mean or attention')
+        self.clin = self.add_arg('clin', type=int, help='linear or embed of cluster')
 
 
 C = CluArgs()

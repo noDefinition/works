@@ -49,7 +49,6 @@ class UAtt(V2):
         #     body_lkup = self.w_embed(body_wint)  # (bs, tn, dw)
         #     ub_recon = self.attend_lkup_user(body_lkup, body_mask, user_lkup)  # (bs, dw)
         #     qu_rep += self.addb * ub_recon
-        #
         # return qu_rep
 
     def forward(self, title_int: List[List[int]], body_int: List[List[int]], user_int: List[int]):

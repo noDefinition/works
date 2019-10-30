@@ -114,66 +114,6 @@ class Data:
         cdong_home = '/home/cdong/works/cqa/data/{}'.format(self.name)
         return iu.join(cdong_home, *names)
 
-    # @tmu.stat_time_elapse
-    # def init_save_rvs2qids_qid2qauv(self):
-    #     rvs2qids = partition_qids(self.aid2qu_file, 42987, 0)
-    #     self.load_wwang_parts()
-    #
-    #     uid_sort = sorted(set(uid for aid, (qid, uid) in self.aid2qu.items()))
-    #     uid2uint = dict((uid, uint) for uint, uid in enumerate(uid_sort))
-    #
-    #     # user vec init by averaging
-    #     _, w_dim = self.word_vec.shape
-    #     uint2v_sum = np.zeros(shape=(len(uid2uint), w_dim), dtype=np.float32)
-    #     uint2count = np.zeros(shape=(len(uid2uint), 1), dtype=np.float32)
-    #     for aid, (qid, uid) in self.aid2qu.items():
-    #         uint = uid2uint[uid]
-    #         w_vecs = [self.word_vec[wid - 1] for wid in self.aid2wids[aid] if wid > 0]
-    #         uint2v_sum[uint] += np.mean(w_vecs, axis=0)
-    #         uint2count[uint][0] += 1
-    #     uint2vec = uint2v_sum / uint2count
-    #
-    #     qid2auvs = {}
-    #     for aid, (qid, uid) in self.aid2qu.items():
-    #         qid2auvs.setdefault(qid, list()).append((aid, uid, self.aid2vote[aid]))
-    #     qid2qauv = {}
-    #     for idx, (qid, auvs) in enumerate(qid2auvs.items()):
-    #         auvs = sorted(auvs, key=lambda x: x[-1], reverse=True)
-    #         aids, uids, votes = au.transpose(auvs)
-    #         qwid = self.qid2wids[qid]
-    #         awids = [self.aid2wids[aid] for aid in aids]
-    #         uints = [uid2uint[uid] for uid in uids]
-    #         qid2qauv[qid] = (qwid, awids, uints, votes)
-    #         if idx < 10:
-    #             print(auvs)
-    #             print()
-    #             print(aids)
-    #             print(qwid)
-    #             print(qid2qauv[qid][1])
-    #             print(qid2qauv[qid][2])
-    #             print('-------------------------------')
-    #
-    #     iu.dump_pickle(self.user_vec_file, uint2vec)
-    #     iu.dump_pickle(self.uid2uint_file, uid2uint)
-    #     iu.dump_pickle(self.rvs2qids_file, rvs2qids)
-    #     iu.dump_pickle(self.qid2qauv_file, qid2qauv)
-
-    # @tmu.stat_time_elapse
-    # def init_save_rvs2qids_qid2qauv_simple(self):
-    #     tmu.check_time('load')
-    #     print(self.qid2qauv_file)
-    #     self.rvs2qids = iu.load_pickle(self.rvs2qids_file)
-    #     self.qid2qauv = iu.load_pickle(self.qid2qauv_file)
-    #     tmu.check_time('load')
-    #     rvs2lim = {R: 1000, V: 100, S: 100}
-    #     rvs2qids_simple = {x: np.random.choice(qids, rvs2lim[x], replace=False)
-    #                        for x, qids in self.rvs2qids.items()}
-    #     chosen_qids = set(au.merge(rvs2qids_simple.values()))
-    #     print('chosen qid num', len(chosen_qids), len(au.merge(rvs2qids_simple.values())))
-    #     qid2qauv_simple = {qid: self.qid2qauv[qid] for qid in chosen_qids}
-    #     iu.dump_pickle(self.simple_rvs2qids_file, rvs2qids_simple)
-    #     iu.dump_pickle(self.simple_qid2qauv_file, qid2qauv_simple)
-
     def load_word_vec(self):
         self.word_vec = iu.load_pickle(self.word_vec_file)
 
@@ -237,28 +177,6 @@ class Data:
         # print(len(self.word_vec))
         # print(len(wid_set), max(wid_set))
 
-    # def form_tfidf_feature(self):
-    #     TaggedDocument
-    #     from scipy.sparse import csr_matrix, vstack
-    #     from scipy import io
-    #     wid2idf = iu.load_pickle(self.wid2idf_file)
-    #     X = list()
-    #     Y = list()
-    #     for _, (ql, al, ul, vl) in self.gen_train():
-    #         Xa = list()
-    #         for wids in al:
-    #             idf = np.zeros(len(wid2idf))
-    #             tf = np.zeros(len(wid2idf))
-    #             for wid in wids:
-    #                 idf[wid] = wid2idf[wid]
-    #                 tf[wid] += 1
-    #             tfidf = tf * idf
-    #             Xa.append(tfidf)
-    #         X.append(csr_matrix(Xa))
-    #         Y.extend(vl)
-    #     X = vstack(X)
-    #     print(X.shape)
-
     # def train_doc2vec(self):
     #     from gensim.models.doc2vec import Doc2Vec, TaggedDocument
     #     tag = 0
@@ -267,13 +185,6 @@ class Data:
 
     # def load_wid2idf(self):
     #     self.wid2idf = iu.load_pickle(self.wid2idf_file)
-
-    # @tmu.stat_time_elapse
-    # def load_cdong_simple(self):
-    #     self.load_word_vec()
-    #     self.load_user_vec()
-    #     self.rvs2qids = iu.load_pickle(self.simple_rvs2qids_file)
-    #     self.qid2qauv = iu.load_pickle(self.simple_qid2qauv_file)
 
     def rvs_size(self):
         return [len(self.rvs2qids[x]) for x in RVS]

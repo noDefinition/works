@@ -1,42 +1,29 @@
 from typing import List
+
 import numpy as np
-from utils import lu, iu, au, tmu
-from uclu.me import UcluArgs, U
-from uclu.me.models import *
-from uclu.data.document import Document
+
 from uclu.data.datasets import Sampler
+from uclu.data.document import Document
+from uclu.me import U, UcluArgs
+from uclu.me.models import *
+from utils import au, iu, lu, tmu
+from utils.tune.base_runner import Runner
 
 
-class Runner:
+class UcluRunner(Runner):
     def __init__(self, args: UcluArgs):
-        self.args = args
-        self.n_epoch = args.ep
+        super(UcluRunner, self).__init__(args)
         self.d_embed = args.ed
         self.title_pad = args.tpad
         self.body_pad = args.bpad
         self.batch_size = args.bs
         self.sampler = Sampler(args.dn)
         self.model = name2m_class[args.vs](args)
-        self.epoch: int = 0
-        self.history = list()
-
-        self.logger = None
-        args_dict = {k: v for k, v in args.__dict__.items() if k != 'parser' and v is not None}
-        if args.lg:
-            log_name = au.entries2name(args_dict, exclude={U.gi, U.gp, U.lg}, postfix='.txt')
-            self.logger = lu.get_logger(iu.join(args.lg, log_name))
-        self.ppp(iu.dumps(args_dict))
-
-    def ppp(self, info: str):
-        print(info)
-        if self.logger:
-            self.logger.info(info)
 
     def main(self):
         self.sampler.load(self.d_embed, self.title_pad, self.body_pad, topic_ratio=1)
         self.model.build(self.sampler.w_embed, self.sampler.u_embed, self.sampler.c_embed)
-        # self.model.cuda(self.model.device)
-        for e in range(self.n_epoch):
+        for e in range(self.num_epoch):
             self.one_epoch()
             if self.should_early_stop():
                 return
@@ -49,9 +36,9 @@ class Runner:
 
     def one_batch(self, bid: int, docarr: List[Document]):
         self.model.train_step(docarr)
-        if self.is_lucky(0.01):
-            losses = self.model.get_losses(docarr)
-            self.ppp(f'losses: {losses}')
+        # if self.is_lucky(0.01):
+        #     losses = self.model.get_losses(docarr)
+        #     self.ppp(f'losses: {losses}')
 
     @staticmethod
     def is_lucky(prob: float):
@@ -67,7 +54,7 @@ class Runner:
 
     def should_early_stop(self) -> bool:
         scores = self.evaluate()
-        self.ppp(iu.dumps(scores))
+        self.ppp(scores, json=True)
         value = np.mean(list(scores.values()))
         h = self.history
         h.append(value)
@@ -91,4 +78,4 @@ class Runner:
 
 
 if __name__ == '__main__':
-    Runner(UcluArgs().parse_args()).main()
+    UcluRunner(UcluArgs().parse_args()).main()

@@ -12,7 +12,7 @@ class N10(N5):
         ph, lk = tf.placeholder, tf.nn.embedding_lookup
         shape = (None,)
         self.p_did = ph(i32, shape=shape)
-        self.n_dids = [ph(i32, shape=shape) for _ in range(self.neg_n)]
+        self.n_dids = [ph(i32, shape=shape) for _ in range(self.neg_num)]
         self.d_embed = tf.get_variable('d_embed', shape=[30000, ed])
 
     def define_denses(self):

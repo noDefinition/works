@@ -35,7 +35,7 @@ class LY:
         return ret
         # return LY(a + b for a in self.pairs_list for b in other.pairs_list)
 
-    def eval(self):
+    def eval(self) -> List[Dict]:
         return au.merge(au.grid_params(pairs) for pairs in self.pairs_list)
 
 

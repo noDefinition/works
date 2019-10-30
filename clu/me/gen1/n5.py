@@ -1,4 +1,7 @@
 import numpy as np
+
+from clu.me import CluArgs
+
 from .n1 import *
 
 
@@ -7,10 +10,12 @@ class N5(N1):
     """ 对抗噪声（聚类/单词embedding加噪声参数）"""
     file = __file__
 
-    def __init__(self, args: dict):
+    def __init__(self, args: CluArgs):
         super(N5, self).__init__(args)
-        self.worc = args[C.worc]
-        self.eps = args[C.eps]
+        self.worc = args.worc
+        self.eps = args.eps
+        self.trep = args.trep
+        self.clin = args.clin
 
     def define_cluster_embed(self, clu_embed):
         super(N5, self).define_cluster_embed(clu_embed)
@@ -33,28 +38,44 @@ class N5(N1):
                                for i, n in enumerate(self.n_seqs)]
 
     def define_denses(self):
-        ed, md, init = self.dim_w, self.dim_m, self.x_init
-        self.W_1 = Dense(ed, ed, kernel=init, name='W_1')
-        self.W_2 = Dense(ed, ed, kernel=init, name='W_2')
-        self.W_3 = Dense(ed, ed, kernel=init, name='W_3')
-        self.Q = tf.get_variable(shape=(1, 1, ed), initializer=init, name='Q')
-        self.W_doc = [self.W_1, self.W_2, self.W_3]
+        dw, init = self.dim_w, self.x_init
+        self.W_1 = Dense(dw, dw, kernel=init, name='W_1')
+        # self.W_2 = Dense(ed, ed, kernel=init, name='W_2')
+        # self.W_3 = Dense(ed, ed, kernel=init, name='W_3')
+        # self.Q = tf.get_variable(shape=(1, 1, ed), initializer=init, name='Q')
+        # self.W_doc = [self.W_1, self.W_2, self.W_3]
+        self.W_C = Dense(dw, self.c_num, kernel=init, name='W_C')
+
+    def get_probs_and_recon(self, e, c, name):
+        with tf.name_scope(name):
+            if self.clin == 0:
+                c_score = tf.matmul(e, tf.transpose(c))  # (bs, nc)
+            else:
+                c_score = self.W_C(e)  # (bs, nc)
+            c_probs = tf.nn.softmax(c_score, axis=1)  # (bs, nc)
+            r = tf.matmul(c_probs, c)  # (bs, dw)
+            # r = self.D_r(r, name='proj_r')
+            # r = relu(r, name='relu_r')
+        return c_probs, r
 
     def multi_dim_att(self, w_emb):
-        w = self.W_1(w_emb, name='get_w')
-        q = self.W_2(self.Q, name='get_q')
-        wq_score = self.W_3(tf.nn.sigmoid(w + q), name='wq_score')
-        wq_alpha = tf.nn.softmax(wq_score, axis=1)
-        wq_apply = tf.multiply(wq_alpha, w_emb)
-        md_att = tf.reduce_sum(wq_apply, axis=1, keepdims=False)
-        return wq_alpha, md_att
-
-    # def get_c_probs_r(self, e, c, name):
-    #     with tf.name_scope(name):
-    #         c_score = tf.matmul(e, tf.transpose(c))
-    #         c_probs = tf.nn.softmax(c_score, axis=1)
-    #         restore = tf.matmul(c_probs, c)
-    #     return c_probs, restore
+        # w_emb (bs, tn, dw)
+        mean = tf.reduce_mean(w_emb, axis=1, keepdims=False)  # (bs, dw)
+        if self.trep == 0:
+            return None, mean
+        q = self.W_1(mean)  # (bs, dw)
+        q = tf.expand_dims(q, axis=2)  # (bs, dw, 1)
+        wq_score = tf.matmul(w_emb, q)  # (bs, tn, 1)
+        # w = self.W_1(w_emb, name='get_w')
+        # q = self.W_2(self.Q, name='get_q')
+        # wq_score = self.W_3(tf.nn.sigmoid(w + q), name='wq_score')
+        wq_probs = tf.nn.softmax(wq_score, axis=1)  # (bs, tn, 1)
+        wq_probs = tf.transpose(wq_probs, perm=[0, 2, 1])  # (bs, 1, tn)
+        md_att = tf.matmul(wq_probs, w_emb)  # (bs, 1, dw)
+        md_att = tf.squeeze(md_att, axis=1)  # (bs, dw)
+        # wq_apply = tf.multiply(wq_probs, w_emb)
+        # md_att = tf.reduce_sum(wq_apply, axis=1, keepdims=False)
+        return wq_probs, md_att
 
     def get_cpn_nis(self, w_nis, c_nis):
         with tf.name_scope('c_embed'):
@@ -65,9 +86,9 @@ class N5(N1):
         with tf.name_scope('n_mdatt'):
             n_reps = self.n_reps_nis if w_nis else self.n_lkups
             n = tf.concat([self.multi_dim_att(n_rep)[-1] for n_rep in n_reps], axis=0)
-        if not w_nis and not c_nis:
-            print('first p_wqatt')
-            self.p_wqatt = p_wqatt
+        # if not w_nis and not c_nis:
+        #     print('first p_wqatt')
+        #     self.p_wqatt = p_wqatt
         return c, p, n
 
     def get_loss_with(self, w_nis: bool, c_nis: bool):
@@ -89,17 +110,17 @@ class N5(N1):
     def forward(self):
         l1, l2, l3, l4 = self.l_reg
         pc_probs, pairwise, pointwise = self.get_loss_with(w_nis=False, c_nis=False)
-        reg_loss = sum(w.get_norm(order=2, add_bias=False) for w in self.W_doc)
+        # reg_loss = sum(w.get_norm(order=2, add_bias=False) for w in self.W_doc)
         # self.sim_loss = l1 * pairwise - l3 * pointwise + l4 * reg_loss
         self.sim_loss = tf.constant(0., f32)
         if l1 is not None and l1 > 1e-8:
             self.sim_loss += l1 * pairwise
-        if l3 is not None and l3 > 1e-8:
-            self.sim_loss -= l3 * pointwise
-        if l4 is not None and l4 > 1e-8:
-            self.sim_loss += l4 * reg_loss
+        # if l3 is not None and l3 > 1e-8:
+        #     self.sim_loss -= l3 * pointwise
+        # if l4 is not None and l4 > 1e-8:
+        #     self.sim_loss += l4 * reg_loss
 
-        if l2 > 1e-8:
+        if l2 is not None and l2 > 1e-8:
             wc_choise = [dict(w_nis=True, c_nis=False), dict(w_nis=False, c_nis=True),
                          dict(w_nis=True, c_nis=True)][self.worc]
             pc_probs_nis, pairwise_nis, _ = self.get_loss_with(**wc_choise)
@@ -108,6 +129,7 @@ class N5(N1):
             self.pairwise_nis = pairwise_nis
             self.pc_probs_nis = pc_probs_nis
         else:
+            print('\n---- no adversarial ----\n')
             self.use_adv_nis = False
             self.adv_loss = self.pairwise_nis = self.pc_probs_nis = None
 
@@ -193,34 +215,35 @@ class N5(N1):
     #     pd.set_option('display.width', 1000)
     #     ppp(df)
 
-    def evaluate(self, batches):
-        def get_scores(pred_target, add_on):
-            preds, trues = list(), list()
-            for batch in batches:
-                c_probs = self.sess.run(pred_target, feed_dict=self.get_fd_by_batch(batch))
-                preds.extend(np.argmax(c_probs, axis=1).reshape(-1))
-                trues.extend(d.topic for d in batch)
-            od = au.scores(trues, preds, au.eval_scores)
-            return Od((k + add_on, v) for k, v in od.items())
+    # def evaluate(self, batches):
+    #     def get_scores(pred_target, add_on):
+    #         preds, trues = list(), list()
+    #         for batch in batches:
+    #             c_probs = self.sess.run(pred_target, feed_dict=self.get_fd_by_batch(batch))
+    #             preds.extend(np.argmax(c_probs, axis=1).reshape(-1))
+    #             trues.extend(d.topic for d in batch)
+    #         od = au.scores(trues, preds, au.eval_scores)
+    #         return Od((k + add_on, v) for k, v in od.items())
+    #
+    #     from collections import OrderedDict as Od
+    #     scores = Od()
+    #     scores.update(get_scores(self.pc_probs, add_on=''))
+    #     if self.use_adv_nis:
+    #         scores.update(get_scores(self.pc_probs_nis, add_on='_nis'))
+    #     return scores
 
-        from collections import OrderedDict as Od
-        scores = Od()
-        scores.update(get_scores(self.pc_probs, add_on=''))
-        if self.use_adv_nis:
-            scores.update(get_scores(self.pc_probs_nis, add_on='_nis'))
-        return scores
-
-    def train_step(self, fd, epoch, max_epoch, batch_id, max_batch_id):
+    def train_step(self, pos, negs, epoch, batch_id):
+        fd = self.get_fd_by_batch(pos, negs)
         if self.use_adv_nis:
             self.sess.run([self.adv_opt] + self.adv_asg, feed_dict=fd)
         else:
             self.sess.run(self.sim_opt, feed_dict=fd)
 
-    def get_loss(self, fd):
-        names = ['adv_loss' if self.use_adv_nis else 'sim_loss', 'pair', 'point']
-        loss = [self.adv_loss if self.use_adv_nis else self.sim_loss, self.pairwise, self.pointwise]
-        if self.use_adv_nis:
-            names.append('pair_nis')
-            loss.append(self.pairwise_nis)
-        losses = [round(l, 4) for l in self.sess.run(loss, feed_dict=fd)]
-        return dict(zip(names, losses))
+    # def get_loss(self, fd):
+    #     names = ['adv_loss' if self.use_adv_nis else 'sim_loss', 'pair', 'point']
+    #     loss = [self.adv_loss if self.use_adv_nis else self.sim_loss, self.pairwise, self.pointwise]
+    #     if self.use_adv_nis:
+    #         names.append('pair_nis')
+    #         loss.append(self.pairwise_nis)
+    #     losses = [round(l, 4) for l in self.sess.run(loss, feed_dict=fd)]
+    #     return dict(zip(names, losses))

@@ -3,8 +3,8 @@ from uclu.me.models.v2 import *
 
 class V3(V2):
     """ 加了用户-标题和用户-主体的额外pairwise，效果大涨 """
-    def __init__(self, args: UcluArgs):
-        super(V3, self).__init__(args)
+    def __init__(self, device, args: UcluArgs):
+        super(V3, self).__init__(device, args)
         self.addpnt: float = args.addpnt
 
     def get_mean_from_wint(self, wint):

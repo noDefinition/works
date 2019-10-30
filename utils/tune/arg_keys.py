@@ -27,6 +27,9 @@ class Args:
         self.parser.add_argument(name, *args, **kwargs)
         return name
 
+    def get_dict(self):
+        return {k: v for k, v in self.__dict__.items() if k != 'parser' and v is not None}
+
     def __init__(self):
         self.parser: ArgumentParser = self.get_parser()
         # 通用的参数

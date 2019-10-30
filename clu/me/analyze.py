@@ -119,8 +119,8 @@ class Analyze(object):
         return parser.parse_args()
 
     def get_log_path(self):
-        new_paths = iu.list_children('./', iu.DIR, r'(log)?\d+', True)
-        old_paths = iu.list_children('./logs', iu.DIR, r'^(log)?\d+', True)
+        new_paths = iu.list_children('./', iu.DIR, r'^\d+', True)
+        old_paths = iu.list_children('./logs', iu.DIR, r'^\d+', True)
         log_paths = (new_paths + old_paths)
         log_path = iu.choose_from(log_paths) if self.choose_log else iu.most_recent(log_paths)
         print('logging path:', log_path)
@@ -156,7 +156,7 @@ class Analyze(object):
         # # if 'abal_wo_L1L2' in log_path:
         # #     group_by = [l1_, l2_, l3_, worc_]
         # #     comment = 'abal_wo_L1L2'
-        self.exclude = {C.ep, C.cn, C.ns, C.gi, C.gp, C.mgn}
+        self.exclude = {C.gi, C.gp}
         # self.group_by = None
         self.log_path = self.get_log_path()
         log_name = iu.get_name(self.log_path)

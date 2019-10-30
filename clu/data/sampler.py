@@ -2,10 +2,10 @@ from clu.data.datasets import *
 
 
 class Sampler:
-    def __init__(self, d_cls):
-        if d_cls in name2d_class:
-            d_cls = name2d_class[d_cls]
-        self.d_obj: Data = d_cls()
+    def __init__(self, d_class):
+        if d_class in name2d_class:
+            d_class = name2d_class[d_class]
+        self.d_obj: Data = d_class()
         self.word2wid: dict = dict()
         self.word2vec: dict = dict()
         self.docarr: List[Document] = list()
@@ -77,37 +77,37 @@ class Sampler:
         Y = np.array([doc.topic for doc in self.docarr])
         return X, Y
 
-    # @staticmethod
-    # def split_length(docarr: List[Document], batch_size: int) -> List[List[Document]]:
-    #     docarr = sorted(docarr, key=lambda x: len(x.tokenids))
-    #     batches, batch = list(), list()
-    #     prev_len = len(docarr[0].tokenids)
-    #     for i, doc in enumerate(docarr):
-    #         doc_len = len(doc.tokenids)
-    #         if doc_len != prev_len or len(batch) >= batch_size:
-    #             batches.append(batch)
-    #             batch = [doc]
-    #         else:
-    #             batch.append(doc)
-    #         if i >= len(docarr) - 1:
-    #             batches.append(batch)
-    #             break
-    #         prev_len = doc_len
-    #     return batches
+    @staticmethod
+    def split_length(docarr: List[Document], batch_size: int) -> List[List[Document]]:
+        docarr = sorted(docarr, key=lambda x: len(x.tokenids))
+        batches, batch = list(), list()
+        prev_len = len(docarr[0].tokenids)
+        for i, doc in enumerate(docarr):
+            doc_len = len(doc.tokenids)
+            if doc_len != prev_len or len(batch) >= batch_size:
+                batches.append(batch)
+                batch = [doc]
+            else:
+                batch.append(doc)
+            if i >= len(docarr) - 1:
+                batches.append(batch)
+                break
+            prev_len = doc_len
+        return batches
 
     def generate(self, batch_size: int, neg_batch_num: int, shuffle: bool):
-        docarr = au.shuffle(self.docarr) if shuffle else self.docarr
-        docarr_list = au.split_slices(docarr, batch_size)
-        for arr in docarr_list:
-            yield arr, None
-        # batches = self.split_length(docarr, batch_size)
-        # print('shuffle_generate - batch num:', len(batches))
-        # for i in range(len(batches)):
-        #     p_batch: List[Document] = batches[i]
-        #     yield p_batch, None
-        # n_idxes: List[int] = np.random.choice([j for j in i_range if j != i], neg_batch_num)
-        # n_batches: List[List[Document]] = [batches[j] for j in n_idxes]
-        # yield p_batch, n_batches
+        # docarr = au.shuffle(self.docarr) if shuffle else self.docarr
+        # docarr_list = au.split_slices(docarr, batch_size)
+        # for arr in docarr_list:
+        #     yield arr, None
+        batches = self.split_length(self.docarr, batch_size)
+        print('shuffle_generate - batch num:', len(batches))
+        i_range = list(range(len(batches)))
+        for i in range(len(batches)):
+            p_batch: List[Document] = batches[i]
+            n_idxes: List[int] = np.random.choice([j for j in i_range if j != i], neg_batch_num)
+            n_batches: List[List[Document]] = [batches[j] for j in n_idxes]
+            yield p_batch, n_batches
 
 
 def summary_datasets():

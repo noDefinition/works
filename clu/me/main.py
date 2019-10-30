@@ -14,7 +14,7 @@ from utils.doc_utils import Document
 class Runner:
     def __init__(self, args: CluArgs):
         self.gid = args.gid
-        self.epoch_max = args.ep
+        self.num_epoch = args.ep
         self.embed_dim = args.ed
         self.gpu_id, self.gpu_frac = args.gi, args.gp
         self.batch_size, self.neg_num = args.bs, args.ns
@@ -39,7 +39,7 @@ class Runner:
             self.param_file = iu.join(self.writer_path, 'model.ckpt')
             iu.mkdir(self.writer_path, rm_prev=True)
 
-        args.clear_args()
+        # args.clear_args()
         self.model = name2m_class[self.model_name](args)
         self.sampler = Sampler(self.data_name)
         self.history = list()
@@ -92,38 +92,38 @@ class Runner:
 
     def iterate_data(self):
         self.get_writer()
-        for e in range(self.epoch_max):
+        for e in range(self.num_epoch):
             self.one_epoch()  # train
             s2v = self.evaluate()  # evaluate
             self.summary_score(s2v)
             if self.should_early_stop(s2v):
                 return
 
-    def one_batch(self, bid: int, docarr: List[Document]):
-        def is_lucky(prob: float):
-            return np.random.random() < prob
-
-        self.model.train_step(docarr, self.epoch, bid)
-        self.summary_model(docarr, self.model.merge_batch, step=self.model.global_step)
-        if is_lucky(0.1):
-            self.summary_model(docarr, self.model.merge_some, step=self.epoch)
+    # def one_batch(self, bid: int, pos: List[Document]):
+    #     def is_lucky(prob: float):
+    #         return np.random.random() < prob
+    # 
+    #     self.model.train_step(pos, self.epoch, bid)
+        # self.summary_model(pos, self.model.merge_batch, step=self.model.global_step)
+        # if is_lucky(0.1):
+        #     self.summary_model(pos, self.model.merge_some, step=self.epoch)
 
     def one_epoch(self):
         print(f'data:{self.data_name}, epoch:{self.epoch}')
-        # batch_gen = self.sampler.generate(self.batch_size, self.neg_num, shuffle=True)
         batches = list(self.sampler.generate(self.batch_size, self.neg_num, shuffle=True))
         for bid, (pos, negs) in enumerate(batches):
-            self.one_batch(bid, pos)
+            self.model.train_step(pos, negs, self.epoch, bid)
+            # self.one_batch(bid, pos)
         if isinstance(self.model, AeSoft):
             self.model.on_epoch_end(self.epoch, [b[0] for b in batches])
         self.epoch += 1
 
     def evaluate(self):
-        clusters, topics = list(), list()
+        y_pred, y_true = list(), list()
         for docarr in self.sampler.eval_batches:
-            clusters.extend(self.model.predict(docarr))
-            topics.extend(d.topic for d in docarr)
-        return au.scores(topics, clusters, au.eval_scores)
+            y_pred.extend(self.model.predict(docarr))
+            y_true.extend(d.topic for d in docarr)
+        return au.scores(y_true, y_pred, au.eval_scores)
 
     # def multi_evaluate(self):
     #     assert isinstance(self.model, AELstm)

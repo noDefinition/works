@@ -1,20 +1,22 @@
-from clu.me import C
+import numpy as np
+
+from clu.me import C, CluArgs
 from utils.deep.layers import *
 
 
 # noinspection PyAttributeOutsideInit,PyPep8Naming
 class N1(object):
-    def __init__(self, args: dict):
-        self.dim_m = args[C.md]
-        self.neg_n = args[C.ns]
-        self.use_bn = args[C.bn]
-        self.smooth = args[C.smt]
-        self.margin = args[C.mgn]
-        self.l_reg = [args[C.l1], args[C.l2], args[C.l3], args[C.l4]]
+    def __init__(self, args: CluArgs):
+        # self.dim_m = args.md
+        self.neg_num = args.ns
+        # self.use_bn = args.bn
+        # self.smooth = args.smt
+        # self.margin = args.mgn
+        self.l_reg = [args.l1, args.l2, args.l3, args.l4]
         # self.w_train = args[C.wtrn]
         # self.c_train = args[C.ctrn]
         self.x_init = tf.contrib.layers.xavier_initializer()
-        self.n_init = tf.random_normal_initializer(mean=0., stddev=args[C.sc])
+        # self.n_init = tf.random_normal_initializer(mean=0., stddev=args[C.sc])
 
     @staticmethod
     def get_variable(name, init, train):
@@ -42,7 +44,7 @@ class N1(object):
         shape = (None, None)
         ph, lk = tf.placeholder, tf.nn.embedding_lookup
         self.p_seq = ph(i32, shape, name='p_seq')
-        self.n_seqs = [ph(i32, shape, name='n_seq_{}'.format(i)) for i in range(self.neg_n)]
+        self.n_seqs = [ph(i32, shape, name='n_seq_{}'.format(i)) for i in range(self.neg_num)]
         with tf.name_scope('lookup_pos'):
             self.p_lkup = lk(self.w_embed, self.p_seq, name='p_rep')
         with tf.name_scope('lookup_neg'):
@@ -249,15 +251,15 @@ class N1(object):
         fd[self.is_train] = False
         return np.argmax(self.sess.run(self.pc_probs, feed_dict=fd), axis=1).reshape(-1)
 
-    def evaluate(self, batches):
-        clusters, topics = list(), list()
-        for batch in batches:
-            clusters.extend(self.predict(batch))
-            topics.extend(d.topic for d in batch)
-        return au.scores(topics, clusters, au.eval_scores)
+    # def evaluate(self, batches):
+    #     clusters, topics = list(), list()
+    #     for batch in batches:
+    #         clusters.extend(self.predict(batch))
+    #         topics.extend(d.topic for d in batch)
+    #     return au.scores(topics, clusters, au.eval_scores)
 
-    def save(self, file):
-        tf.train.Saver().save(self.sess, file)
+    # def save(self, file):
+    #     tf.train.Saver().save(self.sess, file)
 
-    def load(self, file):
-        tf.train.Saver().restore(self.sess, file)
+    # def load(self, file):
+    #     tf.train.Saver().restore(self.sess, file)

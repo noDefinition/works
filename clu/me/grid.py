@@ -11,31 +11,41 @@ class GridClu(BaseGrid):
     def __init__(self):
         super(GridClu, self).__init__()
         self.datas, self.vers, self.gpu_ids, self.gpu_max = Nodes.select(
-            nnew=(class_list, [AeSoft], [0, 1], 3),
+            # nnew=(class_list, [N5], [0, 1], 2),
+            n1702=([DataTrec, DataGoogle, DataEvent], [N5], [0, 1], 3),
         )
         if self.is_debug:
-            self.datas, self.gpu_ids, self.gpu_max = [DataGoogle], [1], 1
-        self.comment = self.get_comment(default='try_soft_slide')
+            self.datas, self.gpu_ids, self.gpu_max = [DataTrec], [1], 1
+        self.comment = self.get_comment(default='aaai_rebuttal')
         self.copy_modules = [m] + self.vers
 
     def grid_od_list(self):
         data_ly = LY({
-                         # C.bs: {
-                         #     DataTrec: [64],
-                         #     DataGoogle: [64],
-                         #     DataEvent: [30],
-                         #     DataReuters: [10],
-                         #     Data20ng: [10],
-                         # }.get(d),
-                         # C.bs: [64] if d in {DataTREC, DataGoogle, DataEvent} else [16],
-                         C.bs: [64],
-                         C.dn: [d.name], C.cn: [d.topic_num], C.pad: [d.seq_len],
-                     } for d in self.datas)
+            # C.bs: {
+            #     DataTrec: [64],
+            #     DataGoogle: [64],
+            #     DataEvent: [30],
+            #     DataReuters: [10],
+            #     Data20ng: [10],
+            # }.get(d),
+            C.bs: [64], C.dn: [d.name], C.cn: [d.topic_num], 
+            # C.pad: [d.seq_len],
+            C.pad: [0],
+        } for d in self.datas)
         model_ly = LY()
         for v in self.vers:
             tmp_ly = LY({
                 C.lid: [7, 23], C.ep: [100], C.lr: [1e-4], C.vs: [v.__name__],
             })
+            if v in {N5}:
+                tmp_ly *= LY({
+                    C.trep: [1, 0],
+                    C.clin: [1, 0],
+                    C.l1: [1, 2],
+                    C.bs: [64],
+                    C.ns: [16],
+                    C.ed: [300],
+                })
             # if v in {VAE1, VAE3}:
             #     tmp_ly *= LY({
             #                      C.ptp: [0],

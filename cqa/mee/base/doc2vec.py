@@ -1,10 +1,11 @@
-from utils import tmu, mu, iu, lu, tu
 from gensim.models.doc2vec import Doc2Vec, TaggedDocument
-from cqa.data.datasets import DataSo, DataZh, Data
-from cqa.mee.models.funcs import instant_denses, pairwise_sub
-from utils.deep.layers import *
+
+from cqa.data.datasets import Data, DataSo, DataZh
 from cqa.mee.evaluate import MeanRankScores
 from cqa.mee.main import my_pbar
+from cqa.mee.models.funcs import instant_denses, pairwise_sub
+from utils import iu, lu, mu, tmu, tu
+from utils.deep.layers import *
 
 
 @tmu.stat_time_elapse

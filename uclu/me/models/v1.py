@@ -1,27 +1,28 @@
 from typing import List
+
 import numpy as np
 import torch as torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as opt
-from uclu.me import UcluArgs
+
 from uclu.data.document import Document
+from uclu.me import UcluArgs
+from uclu.me.models.common import Common
 
 
-class V1(nn.Module):
-    def __init__(self, args: UcluArgs):
-        super(V1, self).__init__()
+# class V1(nn.Module):
+class V1(Common):
+    def __init__(self, device, args: UcluArgs):
+        super(V1, self).__init__(device)
         self.lr = args.lr
-        self.device = torch.device('cuda:%d' % args.gi)
+        # self.device = torch.device('cuda:%d' % args.gi)
 
     def define_embeds(self, w_init, u_init, c_init):
         self.num_w, self.dim_w = w_init.shape
         self.num_u, self.dim_u = u_init.shape
         self.num_c, self.dim_c = c_init.shape
         get_embed = nn.Embedding.from_pretrained
-        # self.w_embed = get_embed(self.assign_tensor(w_init), freeze=False, padding_idx=0)
-        # self.u_embed = get_embed(self.assign_tensor(u_init), freeze=False, padding_idx=0)
-        # self.c_embed = get_embed(self.assign_tensor(c_init), freeze=False, padding_idx=0)
         self.w_embed = get_embed(torch.tensor(w_init), freeze=False, padding_idx=0)
         self.u_embed = get_embed(torch.tensor(u_init), freeze=False, padding_idx=0)
         self.c_embed = get_embed(torch.tensor(c_init), freeze=False, padding_idx=0)
@@ -39,17 +40,20 @@ class V1(nn.Module):
         self.define_optimizer()
         self.cuda(self.device)
 
-    def assign_tensor(self, inputs, dtype=None):
-        return torch.tensor(inputs, dtype=dtype).cuda(self.device)
-
-    @staticmethod
-    def mean_pooling(tensor, mask):
-        # (bs, tn, dw) & (bs, tn, 1) -> (bs, dw)
-        return tensor.sum(axis=1, keepdim=False) / mask.sum(axis=1, keepdim=False)
-
-    def get_mask(self, tensor):
-        # (bs, tn) -> (bs, tn, 1)
-        return torch.gt(tensor, 0).cuda(self.device).double().unsqueeze(-1)
+    # def assign_tensor(self, inputs, dtype=none):
+    #     return torch.tensor(inputs, dtype=dtype).cuda(self.device)
+    #
+    # @staticmethod
+    # def mean_pooling(tensor, mask):
+    #     # (bs, tn, dw) & (bs, tn, 1) -> (bs, dw)
+    #     return tensor.sum(axis=1, keepdim=False) / mask.sum(axis=1, keepdim=False)
+    #
+    # @staticmethod
+    # def mutual_cos(t1, t2):
+    #     t1_e0 = t1.unsqueeze(dim=0)  # (1, bs, dw)
+    #     t2_e1 = t2.unsqueeze(dim=1)  # (bs, 1, dw)
+    #     mut_cos = F.cosine_similarity(t1_e0, t2_e1, dim=2)  # (bs, bs)
+    #     return mut_cos
 
     def get_que_rep(self, title_int: List[List[int]], body_int: List[List[int]]):
         title_tensor = self.assign_tensor(title_int)  # (bs, tn)
@@ -71,13 +75,6 @@ class V1(nn.Module):
         pc_score = torch.matmul(que_rep, self.c_embed.weight.transpose(1, 0))  # (bs, nc)
         pc_probs = F.softmax(pc_score, dim=1)  # (bs, nc)
         return pc_probs
-
-    @staticmethod
-    def mutual_cos(t1, t2):
-        t1_e0 = t1.unsqueeze(dim=0)  # (1, bs, dw)
-        t2_e1 = t2.unsqueeze(dim=1)  # (bs, 1, dw)
-        mut_cos = F.cosine_similarity(t1_e0, t2_e1, dim=2)  # (bs, bs)
-        return mut_cos
 
     def forward(self, title_int: List[List[int]], body_int: List[List[int]], user_int: List[int]):
         raise NotImplementedError('Do not use this base function')

@@ -56,7 +56,7 @@ class BERTDataset(Dataset):
 
     def random_word(self, sentence):
         tokens = sentence.split()
-        output_label = []
+        labels = []
         for i, token in enumerate(tokens):
             prob = random.random()
             if prob < 0.15:
@@ -70,11 +70,11 @@ class BERTDataset(Dataset):
                 # 10% randomly change token to current token
                 else:
                     tokens[i] = self.vocab.word2wint.get(token, self.vocab.unk_index)
-                output_label.append(self.vocab.word2wint.get(token, self.vocab.unk_index))
+                labels.append(self.vocab.word2wint.get(token, self.vocab.unk_index))
             else:
                 tokens[i] = self.vocab.word2wint.get(token, self.vocab.unk_index)
-                output_label.append(0)
-        return tokens, output_label
+                labels.append(0)
+        return tokens, labels
 
     def random_sentence(self, index):
         t1, t2 = self.get_corpus_line(index)

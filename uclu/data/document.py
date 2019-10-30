@@ -29,7 +29,7 @@ class Document:
     def to_dict(self) -> dict:
         return {k: getattr(self, k) for k in self.attrs}
 
-    def flatten_body(self):
+    def flatten_body(self) -> List[int]:
         from itertools import chain
         return chain.from_iterable(self.body)
         # return (wint for wints in self.body for wint in wints)

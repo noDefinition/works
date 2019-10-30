@@ -2,20 +2,11 @@ from uclu.me.models.v1 import *
 
 
 class V2(V1):
-    def __init__(self, args: UcluArgs):
-        super(V2, self).__init__(args)
+    def __init__(self, device, args: UcluArgs):
+        super(V2, self).__init__(device, args)
         self.addu: float = args.addu
         self.addb: float = args.addb
         self.pair = args.pair
-
-    def max_margin_loss(self, pairwise):
-        n = pairwise.size(0)  # (n, n)
-        ones = torch.ones((n, n), dtype=torch.double).cuda(self.device)  # (n, n)
-        eye = torch.eye(n, dtype=torch.double).cuda(self.device)  # (n, n)
-        pointwise = torch.diag(pairwise).reshape(-1, 1)  # (n, 1)
-        margin_point_pair = (ones - eye) - pointwise + pairwise
-        margin_max = nn.ReLU(inplace=True)(margin_point_pair)
-        return margin_max.sum()
 
     def get_que_rep(self, title_int, body_int):
         title_mask = self.get_mask(title_int)  # (bs, tn, 1)
@@ -76,6 +67,6 @@ class V2(V1):
         title_int, body_int, user_int = self.get_tensors(docarr)
         qu_rep = self.get_doc_rep(title_int, body_int, user_int)  # (bs, dw)
         pc_probs = self.get_pc_probs(qu_rep)  # (bs, nc)
-        pc_probs = torch.argmax(pc_probs, dim=-1)
-        pc_probs = pc_probs.cpu().detach().numpy()
-        return pc_probs
+        clu_pred = torch.argmax(pc_probs, dim=-1)
+        clu_pred = clu_pred.cpu().detach().numpy()
+        return clu_pred
