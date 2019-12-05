@@ -1,49 +1,54 @@
-from collections import OrderedDict as Od
-
-import pandas as pd
-from scipy.sparse import vstack
 from sklearn.decomposition import LatentDirichletAllocation as LDA
 
 from uclu.data.datasets import *
 from utils import iu, mu, tu
+from utils import tmu
+from itertools import product
 
 
-def run_lda(out_file, tf_matrix, topics, lda_kwargs: dict):
+def run_lda(out_file, tf_matrix, topics, lda_kwargs: dict, extra_kwargs: dict, **_):
     print(lda_kwargs)
-    ret = lda_kwargs.copy()
-    x_new = LDA(**lda_kwargs, n_jobs=1).fit_transform(tf_matrix)
+    x_new = LDA(**lda_kwargs, n_jobs=10).fit_transform(tf_matrix)
     clusters = np.argmax(x_new, axis=1)
+    ret = lda_kwargs.copy()
+    ret.update(extra_kwargs)
     ret.update(au.scores(topics, clusters))
     iu.dump_array(out_file, [ret], mode='a')
 
 
-def main(add_body: bool):
-    d_class = DataAu
-    smp = Sampler(d_class)
-    smp.load(0, 0, 0, 0)
-    smp.fit_sparse(add_body=add_body, tfidf=False, p_num=20)
-    tf_mtx = vstack([d.tf for d in smp.docarr])
-    topics = [d.tag for d in smp.docarr]
-
-    log_name = 'lda_{}_{}.json'.format(d_class.name, 'add_body' if add_body else 'no_body')
-    out_file = iu.join(d_class.name, log_name)
+def main():
+    out_file = 'lda_{}.json'.format(tmu.format_date()[2:])
     iu.remove(out_file)
+    dcls_range = [DataZh]
+    addb_range = [True, False]
+    for dcls, addb in product(dcls_range, addb_range):
+        smp = Sampler(dcls)
+        smp.load_basic()
+        # smp.fit_sparse(add_body=addb, tfidf=False, p_num=20)
+        smp.fit_tf(add_body=addb, p_num=20)
+        tf_mtx = vstack([d.tf for d in smp.docarr])
+        print('tf_mtx.shape', tf_mtx.shape)
+        topics = [d.tag for d in smp.docarr]
 
-    ratios = np.array([1])
-    iter_num = 100
-    rerun_num = 1
-    kwargs = tu.LY({
-        'max_iter': [iter_num],
-        'learning_method': ['batch'],
-        'random_state': [i + np.random.randint(0, 1000) for i in range(rerun_num)],
-        'doc_topic_prior': [0.1, 1, 0.01],
-        'topic_word_prior': [10, 1, 0.1, 0.01],
-        'n_components': list(map(int, (ratios * d_class.topic_num))),
-    }).eval()
-    args = [(out_file, tf_mtx, topics, kwarg) for kwarg in kwargs]
-    mu.multi_process_batch(run_lda, 6, args)
+        topic_nums = list(map(int, np.array([1]) * dcls.topic_num))
+        iter_num = 100
+        rerun_num = 1
+        kwargs_list = tu.LY({
+            'max_iter': [iter_num],
+            'learning_method': ['batch'],
+            'random_state': [i + np.random.randint(0, 1000) for i in range(rerun_num)],
+            # 'doc_topic_prior': [0.1, 1, 0.01],
+            # 'topic_word_prior': [1, 0.1, 0.01],
+            'doc_topic_prior': [0.1, 1],
+            'topic_word_prior': [1, 0.1],
+            'n_components': topic_nums,
+        }).eval()
+        extra_kwargs = {'addb': addb, 'dn': dcls.name}
+        args = [(out_file, tf_mtx, topics, kwargs, extra_kwargs) for kwargs in kwargs_list]
+        # mu.multi_process_batch(run_lda, 9, args)
+        from utils.tune.tune_utils import auto_gpu
+        auto_gpu(run_lda, args, {0: 9})
 
 
 if __name__ == '__main__':
-    for addb in [True, False]:
-        main(addb)
+    main()

@@ -11,7 +11,7 @@
         "--max-line-length=100",
         "--disable=C0103,C0111,E1305,R0902,R0914,W0401,W0611,W0614,W0105",
     ],
-    "workbench.editor.enablePreview": false,
+    // "workbench.editor.enablePreview": false,
     "editor.rulers": [
         100
     ],
@@ -43,16 +43,16 @@
                 "password": "1q2w3e4r",
                 "dir": "/home/cdong/works"
             },
-            // {
-            //     "type": "sftp",
-            //     "name": "1702",
-            //     "description": "1702",
-            //     "host": "59.78.194.85",
-            //     "port": 22,
-            //     "user": "cdong",
-            //     "password": "1q2w3e4r",
-            //     "dir": "/home/cdong/works"
-            // },
+            {
+                "type": "sftp",
+                "name": "1702",
+                "description": "1702",
+                "host": "59.78.194.85",
+                "port": 22,
+                "user": "cdong",
+                "password": "1q2w3e4r",
+                "dir": "/home/cdong/works"
+            },
             {
                 "type": "sftp",
                 "name": "gpu",
@@ -75,14 +75,14 @@
             }
         ]
     },
-    "remotefs.remote": {
-        "new": {
-            "scheme": "sftp",
-            "host": "59.78.194.116",
-            "username": "cdong",
-            "password": "1q2w3e4r",
-            "rootPath": "/"
-            // "privateKeyPath": "/Users/xx/.ssh/id_rsa",
-        }
-    },
+    // "remotefs.remote": {
+    //     "new": {
+    //         "scheme": "sftp",
+    //         "host": "59.78.194.116",
+    //         "username": "cdong",
+    //         "password": "1q2w3e4r",
+    //         "rootPath": "/"
+    //         // "privateKeyPath": "/Users/xx/.ssh/id_rsa",
+    //     }
+    // },
 }

@@ -1,28 +1,24 @@
-from collections import Counter, defaultdict
-from typing import List
+from collections import defaultdict
 
-import numpy as np
 from gensim.corpora import Dictionary
 from gensim.matutils import dirichlet_expectation
 from gensim.models import AuthorTopicModel as ATM
 
 from uclu.data.datasets import *
-from uclu.data.document import Document
-from utils import au, iu, mu, tu
+from utils import au, iu, tmu, tu
 
 
-def fit_atm(out_file: str, d_class, add_body: bool, kwargs: dict):
+def fit_atm(out_file: str, d_class, add_body: bool, kwargs: dict, **_):
     print(add_body, kwargs)
-    # out_file = './atm_{}.json'.format('add_body' if add_body else 'no_body')
     smp = Sampler(d_class)
     smp.load_basic()
     docarr = smp.docarr
     for doc in docarr:
-        doc.all_texts = list(doc.title)
+        doc.all_wints = list(doc.title)
         if add_body:
-            doc.all_texts += list(doc.flatten_body())
+            doc.all_wints += list(doc.flatten_body())
 
-    corpus = [list(map(str, doc.all_texts)) for doc in docarr]
+    corpus = [list(map(str, doc.all_wints)) for doc in docarr]
     dic = Dictionary(corpus)
     corpus = [dic.doc2bow(bow) for bow in corpus]
     author2doc = defaultdict(list)
@@ -52,31 +48,37 @@ def fit_atm(out_file: str, d_class, add_body: bool, kwargs: dict):
         clusters.append(clu)
 
     kwargs.update(au.scores(topics, clusters))
-    kwargs['addb'] = int(add_body)
-    kwargs['dn'] = d_class.name
+    extra_kwargs = {'addb': int(add_body), 'dn': d_class.name}
+    # kwargs['addb'] = int(add_body)
+    # kwargs['dn'] = d_class.name
+    kwargs.update(extra_kwargs)
     print('----over---->', kwargs)
     iu.dump_array(out_file, [kwargs], mode='a')
 
 
 def main():
-    out_file = './atm.json'
+    out_file = 'atm_{}.json'.format(tmu.format_date()[2:])
     iu.remove(out_file)
     n_rerun = 1
     od_list = tu.LY({
-        'random_state':
-        [i + np.random.randint(0, 1000) for i in range(n_rerun)],
-        'passes': [5], 'iterations': [50],
+        'random_state': [i + np.random.randint(0, 1000) for i in range(n_rerun)],
         'alpha': [1, 0.1, 0.01],
         'eta': [1, 0.1, 0.01],
+        'iterations': [100],
+        'passes': [10],
     }).eval()
 
     args = [
-        (out_file, _d_class, add_body, od)
+        (out_file, dcls, addb, od)
         for od in od_list
-        for add_body in [True, False]
-        for _d_class in [DataAu, DataSf]
+        # for addb in [True, False]
+        # for dcls in [DataAu, DataSf]
+        for addb in [True]
+        for dcls in [DataZh]
     ]
-    mu.multi_process_batch(fit_atm, 9, args)
+    # mu.multi_process_batch(fit_atm, 9, args)
+    from utils.tune.tune_utils import auto_gpu
+    auto_gpu(fit_atm, args, {0: 9})
 
 
 if __name__ == '__main__':

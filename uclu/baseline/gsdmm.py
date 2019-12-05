@@ -1,10 +1,12 @@
 from clu.baselines.gsdmm import GSDMM
 from uclu.data.datasets import *
-from utils import iu, mu, tu
+from utils import iu, tu, tmu
 from utils.doc_utils import Document
 
+from utils.tune.tune_utils import auto_gpu
 
-def run_gsdmm(out_file, d_class: Data, add_body: bool, kwargs: dict):
+
+def run_gsdmm(out_file, d_class: Data, add_body: bool, kwargs: dict, **_):
     print(kwargs)
     smp = Sampler(d_class)
     smp.load_basic()
@@ -38,24 +40,28 @@ def run_gsdmm(out_file, d_class: Data, add_body: bool, kwargs: dict):
 
 
 def main():
-    out_file = './gsdmm.json'
+    dcls_range = [DataZh]
+    # addb_range = [True, False]
+    addb_range = [True]
+    out_file = './gsdmm_{}.json'.format(tmu.format_date()[2:])
     iu.remove(out_file)
 
-    rerun_num = 1
     # ratios = np.concatenate([np.arange(0.2, 1, 0.2), np.arange(1, 5.1, 0.5)])
+    rerun_num = 1
     od_list = tu.LY({
         'iter_num': [100],
-        'seed': [(i + np.random.randint(0, 10000)) for i in range(rerun_num)],
+        'seed': [(i + np.random.randint(0, 1000)) for i in range(rerun_num)],
         'alpha': [1, 0.1, 0.01],
         'beta': [1, 0.1, 0.01],
     }).eval()
     args = [
-        (out_file, _d_class, add_body, od)
+        (out_file, d_class, add_body, od)
         for od in od_list
-        for add_body in [True, False]
-        for _d_class in [DataAu, DataSf]
+        for add_body in addb_range
+        for d_class in dcls_range
     ]
-    mu.multi_process_batch(run_gsdmm, 20, args)
+    # mu.multi_process_batch(run_gsdmm, 9, args)
+    auto_gpu(run_gsdmm, args, {0: 12})
 
 
 if __name__ == '__main__':

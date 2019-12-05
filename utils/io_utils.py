@@ -4,7 +4,6 @@ import pickle
 import re
 import shutil
 from pathlib import Path
-from importlib import reload
 
 dumps = json.dumps
 loads = json.loads
@@ -62,13 +61,13 @@ def parent_name(path): return os.path.dirname(path)
 def get_name(path): return Path(path).name
 
 
-def is_dir(path): return os.path.isdir(path)
+def is_dir(path): return Path(path).is_dir()
 
 
-def is_file(file): return os.path.isfile(file)
+def is_file(path): return Path(path).is_file()
 
 
-def exists(path): return os.path.exists(path)
+def exists(path): return Path(path).exists()
 
 
 def join(*args): return os.path.join(*list(map(str, args)))
@@ -123,13 +122,30 @@ FILE = 2
 def list_children(path, ctype=FILE, pattern=None, full_path=False):
     children = list()
     for c in Path(path).iterdir():
-        if ctype == ALL or (c.is_file() and ctype == FILE) or \
-                (c.is_dir() and ctype == DIR):
-            children.append(c)
-    if pattern is not None and type(pattern) is str:
-        children = [c for c in children if re.search(pattern, c.name) is not None]
-    children = [str(c.absolute()) if full_path else c.name for c in children]
-    return sorted(children)
+        if not any((ctype == ALL, c.is_file() and ctype == FILE, c.is_dir() and ctype == DIR)):
+            continue
+        if pattern is not None and re.search(pattern, c.name) is None:
+            continue
+        children.append(c)
+    children = sorted(str(c.absolute()) if full_path else c.name for c in children)
+    return children
+
+
+def choose_from(files, full_path=True):
+    parr = sorted([Path(f) for f in files], key=lambda p: p.name)[::-1]
+    for idx, c in enumerate(parr):
+        print('*' if idx == 0 else ' ', '{} - {}'.format(idx, c.name))
+    while True:
+        try:
+            choice = input('select idx (default 0): ').strip()
+            index = 0 if choice == '' else int(choice)
+            c = parr[index]
+            break
+        except KeyboardInterrupt:
+            exit('ctrl + c')
+        except:
+            print('invalid index, please re-input')
+    return str(c.absolute()) if full_path else c.name
 
 
 def most_recent(files, full_path=True):
@@ -138,18 +154,23 @@ def most_recent(files, full_path=True):
     return str(c.absolute()) if full_path else c.name
 
 
-def choose_from(files, full_path=True):
-    # file_objs = sorted([Path(f) for f in files], key=lambda p: p.stat().st_mtime)[::-1]
-    file_objs = sorted([Path(f) for f in files], key=lambda p: p.name)[::-1]
-    for idx, c in enumerate(file_objs):
-        print('*' if idx == 0 else ' ', '{} - {}'.format(idx, c.name))
-    while True:
-        try:
-            choice = input('select idx (default 0): ').strip()
-            c = file_objs[0 if choice == '' else int(choice)]
-            break
-        except KeyboardInterrupt:
-            exit('ctrl + c')
-        except:
-            print('invalid index, please re-input')
-    return str(c.absolute()) if full_path else c.name
+def list_in_days(*paths, pattern: str, in_days: float):
+    import time
+
+    def is_in_days(p_obj):
+        diff_sec = int(time.time() - p_obj.stat().st_mtime)
+        span_days = round(diff_sec / sec_one_day, 2)
+        return span_days <= in_days
+
+    def to_absolute(p_obj):
+        return str(p_obj.absolute())
+
+    subs = sum((list_children(p, DIR, pattern, True) for p in paths), list())
+    parr = sorted((Path(s) for s in subs), key=lambda p: p.stat().st_mtime, reverse=True)
+    sec_one_day = 60 * 60 * 24
+    ret = [to_absolute(p) for p in filter(is_in_days, parr)]
+    return ret
+
+# if __name__ == '__main__':
+#     for f in list_in_days('/home/cdong/works/uclu/me/logs', pattern='', in_days=16):
+#         print(f)

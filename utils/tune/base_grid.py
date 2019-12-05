@@ -65,8 +65,7 @@ class BaseGrid:
         self.copy_files_to(log_path)
         od_list = self.grid_od_list()
         od_list = tu.update_od_list(od_list, log_path, shuffle=False)
-        tu.run_od_list(f'python3.6 {self.main_file} ',
-                       od_list, self.gpu_ids, self.gpu_max)
+        tu.run_od_list(f'python3.6 {self.main_file} ', od_list, self.gpu_ids, self.gpu_max)
         if not self.is_debug:
             new_path = log_path + '=='
             iu.rename(log_path, new_path)

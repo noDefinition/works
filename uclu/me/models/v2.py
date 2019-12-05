@@ -6,7 +6,7 @@ class V2(V1):
         super(V2, self).__init__(device, args)
         self.addu: float = args.addu
         self.addb: float = args.addb
-        self.pair = args.pair
+        self.pair: int = args.pair
 
     def get_que_rep(self, title_int, body_int):
         title_mask = self.get_mask(title_int)  # (bs, tn, 1)
@@ -33,6 +33,11 @@ class V2(V1):
         qu_rep = q_rep + self.addu * user_lkup
         return qu_rep
 
+    def get_pc_probs(self, rep):
+        pc_score = torch.matmul(rep, self.c_embed.weight.transpose(1, 0))  # (bs, nc)
+        pc_probs = F.softmax(pc_score, dim=1)  # (bs, nc)
+        return pc_probs
+
     def forward(self, title_int, body_int, user_int):
         qu_rep = self.get_doc_rep(title_int, body_int, user_int)  # (bs, dw)
         pc_probs = self.get_pc_probs(qu_rep)  # (bs, nc)
@@ -57,16 +62,15 @@ class V2(V1):
     def train_step(self, docarr: List[Document]):
         title_int, body_int, user_int = self.get_tensors(docarr)
         loss = self.forward(title_int, body_int, user_int)
-        # loss.cuda(self.device)
         loss.backward()
         self.adam.step()
         self.zero_grad()
-        return loss
+        return loss.item()
 
     def predict(self, docarr: List[Document]):
         title_int, body_int, user_int = self.get_tensors(docarr)
-        qu_rep = self.get_doc_rep(title_int, body_int, user_int)  # (bs, dw)
-        pc_probs = self.get_pc_probs(qu_rep)  # (bs, nc)
-        clu_pred = torch.argmax(pc_probs, dim=-1)
-        clu_pred = clu_pred.cpu().detach().numpy()
-        return clu_pred
+        q_rep = self.get_doc_rep(title_int, body_int, user_int)  # (bs, dw)
+        probs = self.get_pc_probs(q_rep)  # (bs, nc)
+        preds = torch.argmax(probs, dim=-1)
+        preds = preds.cpu().detach().numpy()
+        return preds

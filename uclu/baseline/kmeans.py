@@ -1,20 +1,11 @@
-from typing import List
-import numpy as np
+from itertools import product
+
 from sklearn.cluster import KMeans
 
-from utils import iu, mu, ru, au
 from uclu.data.datasets import *
 from uclu.data.document import Document
-
-
-def run_kmeans(log_file, features, topics, kmeans_kwarg, extra_kwarg):
-    print(kmeans_kwarg, extra_kwarg)
-    x_new = KMeans(**kmeans_kwarg, n_jobs=10).fit_transform(features)
-    clusters = np.argmax(x_new, axis=1)
-    kmeans_kwarg.update(extra_kwarg)
-    kmeans_kwarg.update(au.scores(topics, clusters))
-    iu.dump_array(log_file, [kmeans_kwarg], mode='a')
-    print('---- over ---->', kmeans_kwarg)
+from utils import mu, ru, tmu
+from utils.tune.tune_utils import auto_gpu
 
 
 def get_mean_pooling(docarr: List[Document], w_embed, add_body):
@@ -49,73 +40,108 @@ def get_svd(features, dims: List[int]):
     return res_list
 
 
-def save_args(d_class: Data, add_body: bool):
+# def get_args_file(d_class: Data, add_body: bool):
+#     postfix = 'add_body' if add_body else 'no_body'
+#     args_file = './kmeans_args_{}_{}.pkl'.format(d_class.name, postfix)
+#     return args_file
+
+
+# def run_kmeans(log_file, features, topics, kmeans_kwarg, extra_kwarg):
+#     print(kmeans_kwarg, extra_kwarg)
+
+
+# def main(log_file: str, d_class: Data, add_body: bool):
+# args_file = get_args_file(d_class, add_body)
+# args = iu.load_pickle(args_file)
+# print('len(args)', len(args), [len(k) for k in args])
+# args = [(log_file, features, topics, kmeans_kwarg, extra_kwarg)
+#         for features, topics, extra_kwarg in args]
+# mu.multi_process(run_kmeans, args)
+
+
+def run_kmeans(log_file: str, arg_file: str, kmeans_kwarg: dict, **_):
+    features, topics, extra_kwarg = iu.load_pickle(arg_file)
+    x_new = KMeans(**kmeans_kwarg, n_jobs=12).fit_transform(features)
+    clusters = np.argmax(x_new, axis=1)
+    score_kwarg = au.scores(topics, clusters)
+    ret = dict(**kmeans_kwarg, **extra_kwarg, **score_kwarg)
+    iu.dump_array(log_file, [ret], mode='a')
+    print('---- over ---->', ret)
+    # ret = kmeans_kwarg.copy()
+    # ret.update(kmeans_kwarg)
+    # ret.update(extra_kwarg)
+    # ret.update()
+
+
+# def main(log_file: str, arg_path: str):
+#     kmeans_kwarg = {'max_iter': 300}
+#     files = iu.list_children(arg_path, full_path=True)
+#     auto_gpu(run_kmeans, [(log_file, file, kmeans_kwarg) for file in files], {0: 5})
+
+
+def save_args(args_path: str, d_class: Data, add_body: bool):
     smp = Sampler(d_class)
     smp.load_basic()
-    smp.fit_sparse(add_body=add_body, tfidf=True, p_num=20)
+    smp.fit_sparse(add_body=add_body, tfidf=True, p_num=12)
     topics = [d.tag for d in smp.docarr]
-    base_extra = {'dn': d_class.name, 'addb': int(add_body)}
+    basic = {'dn': d_class.name, 'addb': int(add_body)}
 
-    args = []
-    for dim in smp.d_obj.support_dims:
+    def save2file(x, y, kw):
+        file = iu.join(args_path, au.entries2name(kw, postfix='.pkl'))
+        iu.dump_pickle(file, (x, y, kw))
+        print(file)
+
+    # for dim in smp.d_obj.support_dims:
+    for dim in [32, 64, 128]:
         smp.prepare_embedding(dim=dim, topic_ratio=1)
         mtx = get_mean_pooling_multi(smp.docarr, smp.w_embed, add_body)
         extra = {'source': 'mean', 'dim': mtx.shape[1]}
-        extra.update(base_extra)
-        args.append((mtx, topics, extra))
-        print(mtx.shape, extra)
+        save2file(mtx, topics, dict(**basic, **extra))
+        # extra.update(basic)
+        # args.append((mtx, topics, extra))
+        # print(mtx.shape, extra)
 
     dims = [32, 64, 128, 256, 300]
+    dims = [32, 64, 128]
     tf = smp.get_feature('tf')
     tf_svds = get_svd(tf, dims)
     for mtx in tf_svds:
         extra = {'source': 'tf', 'dim': mtx.shape[1]}
-        extra.update(base_extra)
-        args.append((mtx, topics, extra))
-        print(mtx.shape, extra)
+        save2file(mtx, topics, dict(**basic, **extra))
+        # extra.update(basic)
+        # args.append((mtx, topics, extra))
+        # print(mtx.shape, extra)
 
     tfidf = smp.get_feature('tfidf')
     tfidf_svds = get_svd(tfidf, dims)
     for mtx in tfidf_svds:
         extra = {'source': 'tfidf', 'dim': mtx.shape[1]}
-        extra.update(base_extra)
-        args.append((mtx, topics, extra))
-        print(mtx.shape, extra)
+        save2file(mtx, topics, dict(**basic, **extra))
+        # extra.update(basic)
+        # args.append((mtx, topics, extra))
+        # print(mtx.shape, extra)
 
-    args_file = get_args_file(d_class, add_body)
-    iu.dump_pickle(args_file, args)
-
-
-def main(log_file: str, d_class: Data, add_body: bool):
-    kmeans_kwarg = {'max_iter': 300}
-    args_file = get_args_file(d_class, add_body)
-    args = iu.load_pickle(args_file)
-    print('len(args)', len(args), [len(k) for k in args])
-    args = [(log_file, features, topics, kmeans_kwarg, extra_kwarg)
-            for features, topics, extra_kwarg in args]
-    mu.multi_process(run_kmeans, args)
-
-
-def get_args_file(d_class: Data, add_body: bool):
-    postfix = 'add_body' if add_body else 'no_body'
-    args_file = './kmeans_args_{}_{}.pkl'.format(d_class.name, postfix)
-    return args_file
+    # args_file = get_args_file(d_class, add_body)
+    # iu.dump_pickle(args_file, args)
 
 
 def save_args_and_run():
-    from itertools import product
-    d_class_range = [DataSf, DataAu]
+    args_path = 'kmeans_args'
+
+    iu.mkdir(args_path, rm_prev=False)
+    # d_class_range = [DataSo, DataSf, DataAu]
+    d_class_range = [DataZh]
     addb_range = [True, False]
     args = product(d_class_range, addb_range)
+    for dcls, addb in args:
+        save_args(args_path, dcls, addb)
+    print('args saved')
 
-    # for d_class, add_b in args:
-    #     save_args(d_class, add_b)
-    # print('args saved')
-
-    log_file = './kmeans.json'
+    log_file = 'kmeans_{}.json'.format(tmu.format_date()[2:])
     iu.remove(log_file)
-    for d_class, add_b in args:
-        main(log_file, d_class, add_b)
+    kmeans_kwarg = {'max_iter': 300}
+    files = iu.list_children(args_path, ctype=iu.FILE, pattern='zh', full_path=True)
+    auto_gpu(run_kmeans, [(log_file, file, kmeans_kwarg) for file in files], {0: 20})
 
 
 if __name__ == '__main__':

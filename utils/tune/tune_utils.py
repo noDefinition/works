@@ -68,6 +68,7 @@ def auto_gpu(func: Callable, args_list: List[Tuple], device2max: Dict, callback=
         k = dict(device_id=d)
         q = mp.Queue()
         p = mp.Process(target=subp, args=(func, a, k, q), daemon=True)
+        # p = mp.Process(target=subp, args=(func, a, k, q))
         pool.append((d, p, q))
         p.start()
 
@@ -87,8 +88,8 @@ def auto_gpu(func: Callable, args_list: List[Tuple], device2max: Dict, callback=
     pbar.close()
 
 
-def subp(f, a, k, q):
-    q.put(f(*a, **k))
+def subp(func, args, kwargs, queue):
+    queue.put(func(*args, **kwargs))
 
 
 def run_on_end(args):
@@ -117,7 +118,7 @@ def get_dev2max(dev_ids, dev_max):
     if isinstance(dev_max, int):
         dev2max = {dev_id: dev_max for dev_id in dev_ids}
     elif isinstance(dev_max, Iterable):
-        # assert len(dev_max) == len(dev_ids)
+        assert len(dev_max) == len(dev_ids)
         dev2max = dict(zip(dev_ids, dev_max))
     else:
         raise ValueError('dev_max invalid: ({}){}'.format(type(dev_max), dev_max))
@@ -125,9 +126,7 @@ def get_dev2max(dev_ids, dev_max):
 
 
 def get_max2frac():
-    max2frac = {1: 0.87, 2: 0.43, 3: 0.29, 4: 0.22}
-    max2frac[1] = 0.8
-    max2frac[2] = 0.45
+    max2frac = {1: 0.8, 2: 0.45, 3: 0.29, 4: 0.22}
     return max2frac
 
 

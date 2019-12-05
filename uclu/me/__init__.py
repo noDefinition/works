@@ -19,5 +19,7 @@ class UcluArgs(Args):
         self.addb = self.add_arg('addb', type=float, help='if add body')
         self.addpnt = self.add_arg('addpnt', type=float, help='add extra pointwise')
 
+        self.ws = self.add_arg('ws', type=int, help='window size')
+
 
 U = UcluArgs()

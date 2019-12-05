@@ -20,8 +20,7 @@ class BertTrain(Runner):
         self.body_pad = args.bpad
         self.pre_train = args.ptn
         self.model_class = name2m_class[args.vs]
-        self.data_class = name2d_class[args.dn]
-        self.sampler = Sampler(self.data_class)
+        self.sampler = Sampler(args.dn)
         self.device = torch.device("cuda:%d" % self.gpu_id)
         self.bert_param_file = './L2_H64_A8.torch'
 

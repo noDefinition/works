@@ -12,8 +12,8 @@ class GridUcluBert(BaseGrid):
         super(GridUcluBert, self).__init__()
         vers = [B1]
         self.datas, self.vers, self.gpu_ids, self.gpu_max = Nodes.select(
-            nnew=(class_list, vers, [1], 2),
-            n1702=(class_list, vers, [1], 2),
+            nnew=(_class_list, vers, [1], 2),
+            n1702=(_class_list, vers, [1], 2),
         )
         if self.is_debug:
             self.datas, self.gpu_ids, self.gpu_max = [DataSo], [1], 1

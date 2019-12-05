@@ -58,13 +58,13 @@ class UcluBertDataset(Dataset):
 
     def gen_pos_samples(self, index: int):
         doc_pos = self.sampler.docarr[index]
-        n_text = len(doc_pos.all_texts)
+        n_text = len(doc_pos.all_wints)
         pairs = randint(0, n_text, (min(self.pos_sample_num * 3, n_text * 6), 2))
         pairs.sort(axis=1)
         pairs = list({(a, b) for a, b in pairs if a != b})[:self.pos_sample_num]
         for i1, i2 in pairs:
-            w1 = doc_pos.all_texts[i1]
-            w2 = doc_pos.all_texts[i2]
+            w1 = doc_pos.all_wints[i1]
+            w2 = doc_pos.all_wints[i2]
             if len(w1) > self.max_text_len or len(w2) > self.max_text_len:
                 raise ValueError('tooooo long text', len(w1), len(w2), w1, w2)
             wints = [self.CLS] + w1 + [self.EOS] + w2 + [self.EOS]
@@ -78,8 +78,8 @@ class UcluBertDataset(Dataset):
         doc_pos = self.sampler.docarr[index]
         for _ in range(self.neg_sample_num):
             doc_neg = self.sampler.docarr[other_index(index, len(self))]
-            w1 = doc_pos.all_texts[randint(len(doc_pos.all_texts))]
-            w2 = doc_neg.all_texts[randint(len(doc_neg.all_texts))]
+            w1 = doc_pos.all_wints[randint(len(doc_pos.all_wints))]
+            w2 = doc_neg.all_wints[randint(len(doc_neg.all_wints))]
             wints = [self.CLS] + w1 + [self.EOS] + w2 + [self.EOS]
             wints, labels = self.mask_wints(wints)
             segments = self.get_segmnets(w1, w2)

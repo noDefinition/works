@@ -11,14 +11,14 @@ from utils import au, iu, mu
 class Document:
     def __init__(self):
         self.attrs = ['tag', 'uint', 'title', 'body']
-        self.tag: str = ''
-        self.uint: int = 0
+        self.tag: str = None
+        self.dint: int = None
+        self.uint: int = None
         self.title: List[int] = list()
         self.body: List[List[int]] = list()
-
         self.tseq: List[int] = list()
         self.bseq: List[int] = list()
-        self.all_texts: List[List[int]] = list()
+        self.all_wints: List[List[int]] = list()
         self.tf = self.tfidf = None
 
     def from_dict(self, obj: dict):
@@ -29,7 +29,7 @@ class Document:
     def to_dict(self) -> dict:
         return {k: getattr(self, k) for k in self.attrs}
 
-    def flatten_body(self) -> List[int]:
+    def flatten_body(self):
         from itertools import chain
         return chain.from_iterable(self.body)
         # return (wint for wints in self.body for wint in wints)
@@ -44,6 +44,7 @@ class Document:
             for wid in body_gen:
                 tf[wid] += 1
         self.tf = csr_matrix(tf)
+        assert self.tf.sum() > 0
 
     def split_texts(self, max_text_len: int):
         all_texts = [self.title]
@@ -59,7 +60,7 @@ class Document:
             bs = max_text_len
         wint_split = au.split_slices(bwids, batch_size=bs)
         all_texts.extend(wint_split)
-        self.all_texts = all_texts
+        self.all_wints = all_texts
 
 
 def docarr_fit_tf(docarr: List[Document], word2wint: dict, add_body: bool):
@@ -69,8 +70,8 @@ def docarr_fit_tf(docarr: List[Document], word2wint: dict, add_body: bool):
 
 
 def docarr_fit_tf_multi(docarr: List[Document], word2wint: dict, add_body: bool, p_num: int):
-    docarr_list = mu.split_multi(docarr, p_num)
-    args = [(docarr, word2wint, add_body) for docarr in docarr_list]
+    docarr_parts = mu.split_multi(docarr, p_num)
+    args = [(part, word2wint, add_body) for part in docarr_parts]
     tfarr_list = mu.multi_process(docarr_fit_tf, args)
     tf_gen = (tf for tfarr in tfarr_list for tf in tfarr)
     for doc, tf in zip(docarr, tf_gen):
@@ -79,11 +80,12 @@ def docarr_fit_tf_multi(docarr: List[Document], word2wint: dict, add_body: bool,
 
 
 def docarr_fit_tfidf(docarr: List[Document]):
-    transformer = TfidfTransformer(norm='l2', sublinear_tf=True)
+    """ assert tf already fit """
+    trans = TfidfTransformer(norm='l2', sublinear_tf=True, smooth_idf=True, use_idf=True)
     tf = vstack([d.tf for d in docarr])
-    tfidf = transformer.fit_transform(tf)
-    tfidf = tfidf * np.sqrt(tfidf.shape[1])
-    tfidf = preprocessing.normalize(tfidf, norm='l2') * 10
+    tfidf = trans.fit_transform(tf)
+    # tfidf = tfidf * np.sqrt(tfidf.shape[1])
+    # tfidf = preprocessing.normalize(tfidf, norm='l2') * 10
     tfidf = tfidf.astype(np.float32)
     for d, v in zip(docarr, tfidf):
         d.tfidf = v

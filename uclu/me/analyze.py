@@ -15,11 +15,17 @@ class Analyze(object):
         self.use_max: bool = self.args.m
         self.sort_group: bool = self.args.s
         self.choose_log: bool = self.args.c
-        self.choose_log: bool = True
         self.inner_top: int = 5
         self.exclude: set = set()
-        self.group_by: List = list()
-        self.log_path: str = './'
+
+    @staticmethod
+    def get_args():
+        from argparse import ArgumentParser
+        parser = ArgumentParser()
+        parser.add_argument('-m', action='store_false', default=True, help='using max scores')
+        parser.add_argument('-s', action='store_false', default=True, help='if sort tables')
+        parser.add_argument('-c', action='store_false', default=True, help='if choose file')
+        return parser.parse_args()
 
     @staticmethod
     def read_file(file: str):
@@ -44,7 +50,6 @@ class Analyze(object):
             score_od, epoch, e_flag = Analyze.read_file(file)
             if len(score_od) == 0:
                 continue
-            # entries = au.name2entries(fname, exclude=Analyze.exclude, postfix='.txt')
             for p, v in au.name2entries(iu.get_name(file), postfix='.txt'):
                 board.loc[i, p] = v
             for k, v in score_od.items():
@@ -57,11 +62,11 @@ class Analyze(object):
 
     def read_board_multi(self, files: List[str], use_max: bool, inner_top: int) -> pd.DataFrame:
         files_parts: List[List[str]] = mu.split_multi(files, process_num=10)
-        args_list: List[Tuple] = [(fs, use_max, inner_top) for fs in files_parts]
-        board_list: List[pd.DataFrame] = mu.multi_process(self.read_board, args_list)
-        return pd.concat(board_list)
+        args_list: List[Tuple] = [(p, use_max, inner_top) for p in files_parts]
+        res_list: List[pd.DataFrame] = mu.multi_process(self.read_board, args_list)
+        return pd.concat(res_list)
 
-    def print_groups(self, files: List[str], out_name: str = None):
+    def print_groups(self, files: List[str], name: str = None):
         read_func = self.read_board_multi if len(files) >= 20 else self.read_board
         board = read_func(files, self.use_max, self.inner_top)
         drop_cols = list(set(board.columns) & self.exclude)
@@ -71,34 +76,23 @@ class Analyze(object):
         board.sort_values(by=[C.dn, temp], ascending=False, inplace=True)
         board.pop(temp)
         print(board)
-        if out_name:
-            board.to_csv('{}.csv'.format(out_name))
-
-    @staticmethod
-    def get_args():
-        from argparse import ArgumentParser
-        parser = ArgumentParser()
-        parser.add_argument('-m', action='store_false', default=True, help='using max scores')
-        parser.add_argument('-s', action='store_false', default=True, help='if sort tables')
-        parser.add_argument('-c', action='store_false', default=True, help='if choose file')
-        return parser.parse_args()
+        if name:
+            board.to_csv('{}.csv'.format(name))
 
     def get_log_path(self):
-        new_paths = iu.list_children('./', iu.DIR, r'^(log)?\d+', True)
-        old_paths = iu.list_children('./logs', iu.DIR, r'^(log)?\d+', True)
-        log_paths = (new_paths + old_paths)
+        log_paths = iu.list_in_days('./', './logs', pattern=r'^\d', in_days=3)
         log_path = iu.choose_from(log_paths) if self.choose_log else iu.most_recent(log_paths)
-        print('logging path:', log_path)
         return log_path
 
     def main(self):
         self.exclude = {C.ep, C.cn, C.ns, C.gi, C.gp, C.mgn}
         self.log_path = self.get_log_path()
+        print('logging path:', self.log_path)
         log_name = iu.get_name(self.log_path)
         print('Using {} scores'.format(['last', 'max'][int(self.use_max)]))
         log_files = iu.list_children(self.log_path, pattern=r'gid.+\.txt$', full_path=True)
         print(len(log_files))
-        self.print_groups(log_files, out_name=log_name)
+        self.print_groups(log_files, name=log_name)
 
 
 if __name__ == '__main__':
